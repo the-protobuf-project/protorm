@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+// Package wkt.v1 exercises the proto → PostgreSQL type table: well-known types,
+// wrappers, arrays, and maps. (Unsigned-integer widening is verified directly in
+// the types package unit tests, since AIP-0141 forbids uint fields in APIs.)
+package wkt.v1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "protorm/v1/annotations.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "WktProto";
+option java_package = "com.wkt.v1";
+option (protorm.v1.datasource) = {
+  database: "wkt_db"
+  schema: "kitchen"
+};
+
+// Sink is one table holding every interesting type mapping.
+message Sink {
+  option (google.api.resource) = {
+    type: "wkt.v1/Sink"
+    pattern: "sinks/{sink}"
+    singular: "sink"
+    plural: "sinks"
+  };
+
+  // name: IDENTIFIER → PRIMARY KEY.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // bool → BOOLEAN.
+  bool flag = 2;
+
+  // int32 → INTEGER.
+  int32 count32 = 3;
+
+  // int64 → BIGINT.
+  int64 count64 = 4;
+
+  // float → REAL.
+  float ratio = 5;
+
+  // double → DOUBLE PRECISION.
+  double precise = 6;
+
+  // bytes → BYTEA.
+  bytes blob = 7;
+
+  // Timestamp → TIMESTAMPTZ.
+  google.protobuf.Timestamp event_time = 8;
+
+  // Duration → INTERVAL.
+  google.protobuf.Duration window = 9;
+
+  // FieldMask → TEXT.
+  google.protobuf.FieldMask mask = 10;
+
+  // Int64 wrapper → BIGINT.
+  google.protobuf.Int64Value maybe_count = 11;
+
+  // String wrapper → VARCHAR(255).
+  google.protobuf.StringValue maybe_label = 12;
+
+  // repeated string → VARCHAR(255)[].
+  repeated string tags = 13;
+
+  // repeated int32 → INTEGER[].
+  repeated int32 scores = 14;
+
+  // map → JSONB.
+  map<string, string> attributes = 15;
+}

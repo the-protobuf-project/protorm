@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+// Package mongo.v1 exercises the mongodb provider: Mongo type projection,
+// the <domain>.mongodb.prisma fragment extension, and @map("_id") on the PK.
+package mongo.v1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+import "protorm/v1/annotations.proto";
+
+option java_multiple_files = true;
+option java_outer_classname = "MongoProto";
+option java_package = "com.mongo.v1";
+option (protorm.v1.datasource) = {
+  database: "events_db"
+  schema: "events"
+  provider: "mongodb"
+};
+
+// Event is a document in the events collection.
+message Event {
+  option (google.api.resource) = {
+    type: "mongo.v1/Event"
+    pattern: "events/{event}"
+    singular: "event"
+    plural: "events"
+  };
+
+  // name: IDENTIFIER → primary key, mapped to _id.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // kind: REQUIRED string.
+  string kind = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // payload: nested document stored as Json.
+  map<string, string> payload = 3;
+
+  // occurrence_time → DateTime.
+  google.protobuf.Timestamp occurrence_time = 4;
+
+  // score: double → Float.
+  double score = 5;
+}

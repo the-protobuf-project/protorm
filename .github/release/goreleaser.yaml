@@ -1,0 +1,126 @@
+version: 2
+project_name: protoc-gen-protorm
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: protoc-gen-protorm
+    binary: protoc-gen-protorm
+    main: ./plugin/cmd/protoc-gen-protorm
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+archives:
+  - id: protoc-gen-protorm-archive
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}amd64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+    files:
+      - LICENSE
+      - README.md
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: '{{ incpatch .Version }}-next'
+
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug Fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 'Performance Improvements'
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - typo
+
+homebrew_casks:
+  - name: protoc-gen-protorm
+    repository:
+      owner: oh-tarnished
+      name: homebrew-tap
+      token: '{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}'
+    directory: Casks
+    homepage: 'https://github.com/oh-tarnished/protorm'
+    description: 'Protoc plugin generating Prisma, GORM, SQL & CSV schemas from Protobuf + AIP annotations'
+    ids:
+      - protoc-gen-protorm-archive
+    binaries:
+      - protoc-gen-protorm
+    url:
+      verified: 'github.com/oh-tarnished/protorm/'
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/protoc-gen-protorm"]
+          end
+
+release:
+  github:
+    owner: oh-tarnished
+    name: protorm
+  draft: false
+  prerelease: auto
+  name_template: 'v{{.Version}}'
+  header: |
+    ## What's New in v{{.Version}}
+
+    `protoc-gen-protorm` generates Prisma, GORM, SQL, and CSV database schemas
+    from your Protobuf definitions. Download the binary for your platform below.
+
+    ### Installation
+
+    #### Homebrew
+    ```bash
+    brew install oh-tarnished/tap/protoc-gen-protorm
+    ```
+
+    #### Manual (macOS / Linux)
+    ```bash
+    # Pick your platform, e.g. darwin_arm64 / linux_amd64
+    curl -LO https://github.com/oh-tarnished/protorm/releases/download/v{{.Version}}/protoc-gen-protorm_{{.Version}}_darwin_arm64.tar.gz
+    tar -xzf protoc-gen-protorm_{{.Version}}_darwin_arm64.tar.gz
+    sudo mv protoc-gen-protorm /usr/local/bin/
+    ```
+
+    Then reference it from `buf.gen.yaml`:
+    ```yaml
+    plugins:
+      - local: protoc-gen-protorm
+        out: generated
+        opt: [target=prisma]   # prisma | gorm | sql | csv
+    ```

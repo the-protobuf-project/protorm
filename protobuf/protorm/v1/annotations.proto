@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package protorm.v1;
+
+import "google/protobuf/descriptor.proto";
+import "protorm/v1/column.proto";
+import "protorm/v1/datasource.proto";
+import "protorm/v1/table.proto";
+
+option go_package = "github.com/oh-tarnished/protorm/protorm/protormpbv1;protormpbv1";
+option java_multiple_files = true;
+option java_outer_classname = "AnnotationsProto";
+option java_package = "com.protorm.v1";
+
+// annotations.proto is the single import consumers need:
+//
+//	import "protorm/v1/annotations.proto";
+//
+// Field numbers 50000-99999 are reserved for non-Google custom options.
+
+extend google.protobuf.FileOptions {
+  // datasource configures the database name, schema, provider, and URL.
+  DatasourceOptions datasource = 50000;
+}
+
+extend google.protobuf.MessageOptions {
+  // table overrides table-level generation: table name, id strategy, timestamps, indexes.
+  TableOptions table = 50001;
+}
+
+extend google.protobuf.FieldOptions {
+  // col overrides column-level generation: type, sizing, FK actions.
+  ColOptions col = 50002;
+}

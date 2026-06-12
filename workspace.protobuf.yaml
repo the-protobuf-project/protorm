@@ -1,0 +1,2 @@
+# Optional: list of directories containing .proto files (default: this directory)
+proto_path: ./protobuf

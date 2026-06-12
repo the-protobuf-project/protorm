@@ -1,0 +1,8 @@
+go 1.26.4
+
+// Root module — plugin binary + generated pb stubs live here.
+use .
+
+// Examples are a separate module so their transitive deps (generated gRPC
+// stubs, etc.) don't pollute the plugin's dependency graph.
+use ./examples

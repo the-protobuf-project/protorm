@@ -1,0 +1,22 @@
+version: v2
+
+# Generates pre-compiled Go stubs from the protorm custom option protos.
+#
+# Run:  buf generate
+# Out:  protorm/protormpbv1/*.pb.go
+#
+# Consumers go get github.com/oh-tarnished/protorm/protorm/protormpbv1 to import
+# the annotation types at runtime — no local codegen step required.
+#
+# The Go plugin is pinned to match google.golang.org/protobuf in go.mod so CI's
+# "stubs up to date" check is reproducible (no drift from a moving "latest").
+inputs:
+  - directory: protobuf                  # only the options module, not examples
+
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.11
+    out: .
+    opt:
+      # Strip the module prefix when computing the output path so that
+      # github.com/oh-tarnished/protorm/protorm/v1 → protorm/v1/options.pb.go
+      - module=github.com/oh-tarnished/protorm
