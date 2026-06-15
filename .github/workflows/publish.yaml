@@ -1,9 +1,10 @@
 name: Publish (BSR)
 
 # Publishes the protobuf/ module to the Buf Schema Registry
-# (https://buf.build/the-protobuf-project/protorm) on every push to main and on
-# version tags. Proto lint / format / breaking-change checks are handled by
-# lint.yaml, so this workflow only runs `buf push`.
+# (https://buf.build/the-protobuf-project/protorm) on version-tag releases (v*),
+# so BSR module versions line up with GitHub releases (see release.yaml). Proto
+# lint / format / breaking-change checks are handled by lint.yaml, so this
+# workflow only runs `buf push`.
 #
 # Requires a BUF_TOKEN secret: a BSR API token with write access to the
 # the-protobuf-project organization. Add it under
@@ -12,7 +13,6 @@ name: Publish (BSR)
 
 on:
   push:
-    branches: [main]
     tags: ['v*']
 
 permissions:
