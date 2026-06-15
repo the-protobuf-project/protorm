@@ -7,7 +7,7 @@
 // database: events_db
 // schemas:  events
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 /// Event is a document in the events collection.
 model Event {

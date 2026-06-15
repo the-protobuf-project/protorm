@@ -14,7 +14,7 @@ Generated from Protobuf by protoc-gen-protorm. Source of truth is the `.proto` f
 erDiagram
     direction LR
     Shelf {
-        string name PK
+        string id PK
     }
 ```
 
@@ -26,6 +26,7 @@ Shelf groups books physically. The resource's `plural` fixes the irregular plura
 
 | Column | Type | Null |
 | --- | --- | --- |
+| `id` | `CHAR(26)` | not null |
 | `name` | `VARCHAR(255)` | not null |
 | `theme` | `VARCHAR(255)` | not null |
 | `capacity` | `INTEGER` | nullable |

@@ -1,11 +1,11 @@
 version: v2
 
 # This buf.yaml defines a two-module workspace:
-#   protobuf/       — the publishable BSR module (buf.build/oh-tarnished/protorm)
+#   protobuf/       — the publishable BSR module (buf.build/the-protobuf-project/protorm)
 #   examples/proto/ — sample annotated protos that consume the options
 modules:
   - path: protobuf
-    name: buf.build/oh-tarnished/protorm
+    name: buf.build/the-protobuf-project/protorm
 
   - path: examples/proto
     # examples/proto can import protorm options and googleapis because they

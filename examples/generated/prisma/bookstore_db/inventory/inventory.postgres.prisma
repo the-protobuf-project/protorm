@@ -7,12 +7,15 @@
 // database: bookstore_db
 // schemas:  inventory
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 /// Shelf groups books physically. The resource's `plural` fixes the irregular plural ("shelfs" → "shelves") — no table name override needed.
 model Shelf {
+  /// Unique identifier for the record.
+  id String @id @default(ulid()) @map("id")
+
   /// name: IDENTIFIER → PRIMARY KEY, VARCHAR(255).
-  name String @id @map("name")
+  name String @unique @map("name")
 
   /// theme: REQUIRED → NOT NULL VARCHAR(255).
   theme String @map("theme")

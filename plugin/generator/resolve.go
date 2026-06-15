@@ -5,8 +5,8 @@ package generator
 // back-references are populated so generators have both sides of every relation.
 
 import (
-	"github.com/oh-tarnished/protorm/plugin/generator/naming"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
 )
 
 // resolveRelations corrects each ForeignKey against the live referenced table:

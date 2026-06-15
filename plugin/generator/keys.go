@@ -6,8 +6,8 @@ package generator
 // table.go so each file stays small and single-purpose.
 
 import (
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
-	"github.com/oh-tarnished/protorm/protorm/protormpbv1"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/protorm/protormpbv1"
 )
 
 // applyAIPSystemFields gives the AIP-148/164 standard fields their conventional

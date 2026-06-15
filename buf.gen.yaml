@@ -5,7 +5,7 @@ version: v2
 # Run:  buf generate
 # Out:  protorm/protormpbv1/*.pb.go
 #
-# Consumers go get github.com/oh-tarnished/protorm/protorm/protormpbv1 to import
+# Consumers go get github.com/the-protobuf-project/protorm/protorm/protormpbv1 to import
 # the annotation types at runtime — no local codegen step required.
 #
 # The Go plugin is pinned to match google.golang.org/protobuf in go.mod so CI's
@@ -18,5 +18,5 @@ plugins:
     out: .
     opt:
       # Strip the module prefix when computing the output path so that
-      # github.com/oh-tarnished/protorm/protorm/v1 → protorm/v1/options.pb.go
-      - module=github.com/oh-tarnished/protorm
+      # github.com/the-protobuf-project/protorm/protorm/v1 → protorm/v1/options.pb.go
+      - module=github.com/the-protobuf-project/protorm

@@ -155,6 +155,24 @@ func SchemaDomain(schemaName string) string {
 	return parts[len(parts)-1]
 }
 
+// StripPackageVersion drops a trailing API-version segment from an underscore-
+// joined schema name, flattening the version out while keeping the rest:
+// "bookstore_v1" → "bookstore", "fleet_tracking_device_v1" →
+// "fleet_tracking_device", "shop_v2alpha1" → "shop". A name with no trailing
+// version segment ("calendar_app", "public") is returned unchanged, and a name
+// that is only a version segment ("v1") is kept as-is rather than emptied.
+// Opt-in via the protorm.yaml strip_version option.
+func StripPackageVersion(schemaName string) string {
+	parts := strings.Split(schemaName, "_")
+	if len(parts) < 2 {
+		return schemaName
+	}
+	if last := parts[len(parts)-1]; len(last) >= 2 && last[0] == 'v' && last[1] >= '0' && last[1] <= '9' {
+		return strings.Join(parts[:len(parts)-1], "_")
+	}
+	return schemaName
+}
+
 // StripIDSuffix drops a trailing "_id" so a FK column yields a relation stem:
 // "location_id" → "location", "organizer_user_app_ref_id" →
 // "organizer_user_app_ref". A bare "id" (or a name without the suffix) is

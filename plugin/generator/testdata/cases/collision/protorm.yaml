@@ -1,0 +1,8 @@
+# Merge two service packages into one database so their same-named models
+# ("Money") and enums ("Status") collide — exercising target-aware name
+# qualification: Prisma qualifies (global namespace), GORM/SQL/CSV stay bare.
+datasources:
+  - match: "shop.cart.**"
+    database: commerce
+  - match: "shop.order.**"
+    database: commerce

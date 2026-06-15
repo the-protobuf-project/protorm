@@ -23,8 +23,8 @@ import (
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/compiler/protogen"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/naming"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
 )
 
 // buildCtx carries the cross-file state the lossless build needs: every proto
@@ -144,6 +144,7 @@ func (ctx *buildCtx) materialize(db *schema.Database, schemaName string, msg *pr
 		Name:         name,
 		Comment:      cleanComment(msg.Comments.Leading),
 		ModelName:    string(msg.Desc.Name()),
+		LocalName:    string(msg.Desc.Name()),
 		ProtoMessage: full,
 		SourceFile:   sourceFileBase(srcPath),
 		SourceProto:  srcPath,

@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package acme.billing.v1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+
+option go_package = "example.com/test/gen;stripversionv1";
+
+// Invoice lands in schema "acme_billing", not "acme_billing_v1": the
+// protorm.yaml strip_version option flattens the trailing API version out of the
+// resource-type-derived schema name.
+message Invoice {
+  option (google.api.resource) = {
+    type: "acme.billing.v1/Invoice"
+    pattern: "invoices/{invoice}"
+    singular: "invoice"
+    plural: "invoices"
+  };
+
+  // Resource name; the AIP identifier.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // Amount due, in minor units.
+  string amount = 2 [(google.api.field_behavior) = REQUIRED];
+}

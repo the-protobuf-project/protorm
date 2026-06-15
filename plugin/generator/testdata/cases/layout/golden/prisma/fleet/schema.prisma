@@ -8,7 +8,7 @@
 //
 // Connection URLs live in fleet.config.ts (Prisma 7 convention).
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 datasource fleetpgsql {
   provider = "postgresql"

@@ -7,7 +7,7 @@ package header
 import "strings"
 
 // project credits the generator and its authors.
-const project = "protorm — https://github.com/oh-tarnished/protorm"
+const project = "protorm — https://github.com/the-protobuf-project/protorm"
 
 // Info is the metadata rendered into one file's banner. Source and Notes may be
 // empty; the umbrella datasource file, for instance, aggregates schemas and has

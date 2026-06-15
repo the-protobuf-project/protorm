@@ -11,8 +11,8 @@ package generator
 import (
 	"google.golang.org/protobuf/compiler/protogen"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/naming"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
 )
 
 // addOneofDiscriminators appends a <oneof>_case enum column for each real
@@ -45,8 +45,10 @@ func oneofEnum(s *schema.Schema, msg *protogen.Message, o *protogen.Oneof) *sche
 		}
 	}
 	srcPath := o.Desc.ParentFile().Path()
+	caseName := string(msg.Desc.Name()) + naming.PascalGo(string(o.Desc.Name())) + "Case"
 	en := &schema.Enum{
-		Name:        string(msg.Desc.Name()) + naming.PascalGo(string(o.Desc.Name())) + "Case",
+		Name:        caseName,
+		LocalName:   caseName,
 		ProtoName:   protoName,
 		PgSchema:    s.Name,
 		Comment:     "Discriminator for the " + string(o.Desc.Name()) + " oneof of " + string(msg.Desc.Name()) + ".",
@@ -55,6 +57,7 @@ func oneofEnum(s *schema.Schema, msg *protogen.Message, o *protogen.Oneof) *sche
 		SourceDir:   protoDirNoVersion(srcPath),
 	}
 	en.SQLName = naming.SnakeCase(en.Name)
+	en.LocalSQLName = en.SQLName
 	for _, f := range o.Fields {
 		v := naming.ScreamingSnake(string(f.Desc.Name()))
 		en.Values = append(en.Values, &schema.EnumValue{

@@ -14,9 +14,10 @@ import (
 
 	"google.golang.org/protobuf/compiler/protogen"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
-	"github.com/oh-tarnished/protorm/plugin/generator/templates"
-	"github.com/oh-tarnished/protorm/plugin/generator/types"
+	"github.com/the-protobuf-project/protorm/plugin/generator/docs"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/templates"
+	"github.com/the-protobuf-project/protorm/plugin/generator/types"
 )
 
 // Generator implements schema.Target for PostgreSQL DDL output.
@@ -37,6 +38,19 @@ func (g *Generator) Generate(p *protogen.Plugin, dbs []*schema.Database) error {
 			if err := templates.Render(f, "schema.sql.tpl", schemaView(db, s)); err != nil {
 				return fmt.Errorf("sql: %s: %w", path, err)
 			}
+		}
+		rf := p.NewGeneratedFile(db.Name+"/README.md", "")
+		md := docs.Render(db, docs.Meta{
+			Title:   "PostgreSQL schema",
+			Tagline: "CREATE SCHEMA / TYPE / TABLE DDL with foreign keys and indexes.",
+			Outputs: []string{
+				"`<schema>.postgres.sql` — one DDL file per schema.",
+				"Apply referenced tables before referencing ones, or wrap all files in a single transaction.",
+			},
+			Naming: docs.Local(db),
+		})
+		if _, err := rf.Write([]byte(md)); err != nil {
+			return fmt.Errorf("sql: %s/README.md: %w", db.Name, err)
 		}
 	}
 	return nil

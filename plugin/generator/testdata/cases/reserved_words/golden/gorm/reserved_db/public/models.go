@@ -7,7 +7,7 @@
 // database: reserved_db
 // schema:   public
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 package public
 

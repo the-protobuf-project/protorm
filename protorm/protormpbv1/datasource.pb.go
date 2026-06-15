@@ -7,11 +7,12 @@
 package protormpbv1
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -123,7 +124,7 @@ const file_protorm_v1_datasource_proto_rawDesc = "" +
 	"\x06schema\x18\x02 \x01(\tR\x06schema\x12\x10\n" +
 	"\x03url\x18\x03 \x01(\tR\x03url\x12\x1a\n" +
 	"\bprovider\x18\x04 \x01(\tR\bproviderBd\n" +
-	"\x0ecom.protorm.v1B\x0fDatasourceProtoP\x01Z?github.com/oh-tarnished/protorm/protorm/protormpbv1;protormpbv1b\x06proto3"
+	"\x0ecom.protorm.v1B\x0fDatasourceProtoP\x01Z?github.com/the-protobuf-project/protorm/protorm/protormpbv1;protormpbv1b\x06proto3"
 
 var (
 	file_protorm_v1_datasource_proto_rawDescOnce sync.Once

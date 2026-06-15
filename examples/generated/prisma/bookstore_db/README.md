@@ -17,11 +17,11 @@ erDiagram
         string id PK
     }
     Book {
-        string name PK
+        string id PK
         string author_id FK
     }
     Shelf {
-        string name PK
+        string id PK
     }
     Book }o--|| Author : "author_id"
 ```

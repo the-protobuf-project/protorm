@@ -7,10 +7,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/header"
-	"github.com/oh-tarnished/protorm/plugin/generator/naming"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
-	"github.com/oh-tarnished/protorm/plugin/generator/types"
+	"github.com/the-protobuf-project/protorm/plugin/generator/header"
+	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/types"
 )
 
 type fieldLine struct{ Doc, Decl string }

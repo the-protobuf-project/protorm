@@ -74,7 +74,17 @@ type Enum struct {
 	Name string
 
 	// SQLName is the snake_case type name used in DDL ("Genre" → "genre").
+	// Qualified alongside Name on a cross-schema collision (Prisma's global enum
+	// namespace); LocalSQLName keeps the bare form for schema-namespaced targets.
 	SQLName string
+
+	// LocalName / LocalSQLName are the bare, schema-local enum names captured at
+	// build time, before any global-namespace qualification. Schema-namespaced
+	// targets (GORM, SQL, CSV) render these so the schema/package already
+	// disambiguating the enum isn't restated in its name; Prisma uses the
+	// possibly-qualified Name / SQLName.
+	LocalName    string
+	LocalSQLName string
 
 	// ProtoName is the fully-qualified proto enum name ("bookstore.v1.Genre"),
 	// used to deduplicate the same enum referenced from multiple schemas.

@@ -74,18 +74,18 @@ changelog:
 homebrew_casks:
   - name: protoc-gen-protorm
     repository:
-      owner: oh-tarnished
+      owner: the-protobuf-project
       name: homebrew-tap
       token: '{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}'
     directory: Casks
-    homepage: 'https://github.com/oh-tarnished/protorm'
+    homepage: 'https://github.com/the-protobuf-project/protorm'
     description: 'Protoc plugin generating Prisma, GORM, SQL & CSV schemas from Protobuf + AIP annotations'
     ids:
       - protoc-gen-protorm-archive
     binaries:
       - protoc-gen-protorm
     url:
-      verified: 'github.com/oh-tarnished/protorm/'
+      verified: 'github.com/the-protobuf-project/protorm/'
     hooks:
       post:
         install: |
@@ -95,7 +95,7 @@ homebrew_casks:
 
 release:
   github:
-    owner: oh-tarnished
+    owner: the-protobuf-project
     name: protorm
   draft: false
   prerelease: auto
@@ -110,13 +110,13 @@ release:
 
     #### Homebrew
     ```bash
-    brew install oh-tarnished/tap/protoc-gen-protorm
+    brew install the-protobuf-project/tap/protoc-gen-protorm
     ```
 
     #### Manual (macOS / Linux)
     ```bash
     # Pick your platform, e.g. darwin_arm64 / linux_amd64
-    curl -LO https://github.com/oh-tarnished/protorm/releases/download/v{{.Version}}/protoc-gen-protorm_{{.Version}}_darwin_arm64.tar.gz
+    curl -LO https://github.com/the-protobuf-project/protorm/releases/download/v{{.Version}}/protoc-gen-protorm_{{.Version}}_darwin_arm64.tar.gz
     tar -xzf protoc-gen-protorm_{{.Version}}_darwin_arm64.tar.gz
     sudo mv protoc-gen-protorm /usr/local/bin/
     ```

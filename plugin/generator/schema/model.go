@@ -14,8 +14,17 @@ type Table struct {
 	Comment string
 
 	// ModelName is the singular Go/Prisma model name derived from the proto message
-	// simple name. "bookstore.v1.Author" → "Author". Always PascalCase.
+	// simple name. "bookstore.v1.Author" → "Author". Always PascalCase. Qualified
+	// with a schema-domain prefix on a cross-schema name collision so it stays
+	// globally unique (Prisma model names occupy one namespace per database).
 	ModelName string
+
+	// LocalName is the bare, schema-local model name (the proto message simple
+	// name), never qualified for global uniqueness. Schema-namespaced targets
+	// (GORM, SQL, CSV) render this so a name that the @@schema / Go package
+	// already disambiguates isn't redundantly prefixed (a "Location" shared by two
+	// schemas stays "Location", not "CalendarLocation"). Prisma uses ModelName.
+	LocalName string
 
 	// PKColumn is the name of the primary key column resolved during build.
 	// Referenced by FK resolution to emit correct REFERENCES clauses.

@@ -7,7 +7,7 @@
 // database: fleet
 // schema:   fleet_tracking_device
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 package fleettrackingdevice
 

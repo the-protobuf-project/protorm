@@ -12,9 +12,9 @@ import (
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/compiler/protogen"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/naming"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
-	"github.com/oh-tarnished/protorm/plugin/generator/types"
+	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/types"
 )
 
 // buildColumn maps one proto field to a *schema.Column.
@@ -73,14 +73,16 @@ func enumByName(s *schema.Schema, e *protogen.Enum) *schema.Enum {
 		}
 	}
 	en := &schema.Enum{
-		Name:        name,
-		SQLName:     naming.SnakeCase(name),
-		ProtoName:   string(e.Desc.FullName()),
-		PgSchema:    s.Name,
-		Comment:     cleanComment(e.Comments.Leading),
-		SourceFile:  sourceFileBase(e.Desc.ParentFile().Path()),
-		SourceProto: e.Desc.ParentFile().Path(),
-		SourceDir:   protoDirNoVersion(e.Desc.ParentFile().Path()),
+		Name:         name,
+		SQLName:      naming.SnakeCase(name),
+		LocalName:    name,
+		LocalSQLName: naming.SnakeCase(name),
+		ProtoName:    string(e.Desc.FullName()),
+		PgSchema:     s.Name,
+		Comment:      cleanComment(e.Comments.Leading),
+		SourceFile:   sourceFileBase(e.Desc.ParentFile().Path()),
+		SourceProto:  e.Desc.ParentFile().Path(),
+		SourceDir:    protoDirNoVersion(e.Desc.ParentFile().Path()),
 	}
 	for _, v := range e.Values {
 		full := string(v.Desc.Name())

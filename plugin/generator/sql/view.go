@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/header"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/header"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
 )
 
 // quoteIdent wraps a SQL identifier in double quotes (doubling any embedded
@@ -57,11 +57,13 @@ func schemaView(db *schema.Database, s *schema.Schema) map[string]any {
 		}
 		comment := e.Comment
 		if comment == "" {
-			comment = e.Name + " enum values."
+			comment = e.LocalName + " enum values."
 		}
 		enums = append(enums, enumDDLView{
-			Comment:   comment,
-			TypeRef:   qualified(s.Name, e.SQLName),
+			Comment: comment,
+			// Schema-qualified type, so the bare enum name suffices — the schema
+			// already namespaces it (CREATE TYPE "calendar_app"."state", not "…_state").
+			TypeRef:   qualified(s.Name, e.LocalSQLName),
 			ValueList: strings.Join(vals, ", "),
 		})
 	}
@@ -125,7 +127,7 @@ func tableViewOf(s *schema.Schema, t *schema.Table) tableView {
 func colDef(s *schema.Schema, col *schema.Column) string {
 	sqlType := col.SQLType
 	if col.Enum != nil {
-		sqlType = qualified(s.Name, col.Enum.SQLName)
+		sqlType = qualified(s.Name, col.Enum.LocalSQLName)
 	}
 	def := quoteIdent(col.Name) + "  " + sqlType
 	if col.NotNull {

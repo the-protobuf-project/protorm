@@ -5,7 +5,6 @@ package embedded.v1;
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 import "google/protobuf/timestamp.proto";
-import "protorm/v1/annotations.proto";
 
 option go_package = "example.com/test/gen;embeddedv1";
 option java_multiple_files = true;
@@ -42,13 +41,15 @@ message Event {
   // sides (Prisma rejects two unnamed relations between the same model pair).
   Location billing = 6;
 
-  // storage=json inlines this message as a single JSONB column instead of
-  // relationalizing it into a child table (P1.6 embed-vs-relation control).
-  Metadata metadata = 7 [(protorm.v1.col) = {storage: STORAGE_MODE_JSON}];
+  // A nested message is always relationalized into its own child table with a
+  // primary key + foreign key — never flattened into an opaque JSONB column.
+  // Metadata carries no IDENTIFIER, so a ULID `id` primary key is synthesized.
+  Metadata metadata = 7;
 }
 
-// Metadata is referenced only via a storage=json field, so it is inlined as a
-// JSONB column and never becomes its own table.
+// Metadata is reachable only through Event.metadata and carries no resource
+// annotation, yet it still becomes its own table (with a synthesized primary
+// key) rather than an inlined JSONB blob.
 message Metadata {
   // Free-form source system label.
   string source = 1;

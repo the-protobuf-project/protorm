@@ -17,6 +17,9 @@ them for four backends from one source of truth.
 | **sql** | PostgreSQL DDL | `CREATE SCHEMA/TYPE/TABLE`, FK constraints, indexes |
 | **csv** | Flat schema manifest | one row per column — feed to doc tooling or document stores |
 
+Every target also emits a `README.md` with a Mermaid ER diagram and a per-model
+column reference, so the generated tree is self-documenting regardless of backend.
+
 Postgres and MongoDB providers are both supported.
 
 ---
@@ -43,10 +46,10 @@ renders it independently — so all four outputs always agree.
 
 ```bash
 # Homebrew
-brew install oh-tarnished/tap/protoc-gen-protorm
+brew install the-protobuf-project/tap/protoc-gen-protorm
 
 # or go install
-go install github.com/oh-tarnished/protorm/plugin/cmd/protoc-gen-protorm@latest
+go install github.com/the-protobuf-project/protorm/plugin/cmd/protoc-gen-protorm@latest
 ```
 
 The plugin must be on your `PATH` so `protoc`/`buf` can find it.
@@ -56,7 +59,7 @@ You'll also need the option definitions on your import path. With
 
 ```yaml
 deps:
-  - buf.build/oh-tarnished/protorm
+  - buf.build/the-protobuf-project/protorm
 ```
 
 then `import "protorm/v1/annotations.proto";` in your protos.
@@ -178,8 +181,11 @@ generated/prisma/bookstore_db/
 └── inventory/inventory.postgres.prisma    # (a second file, merged datasource)
 
 generated/gorm/bookstore_db/bookstorev1/models.go   # package = folder name
+generated/gorm/bookstore_db/README.md               # ER diagram + model reference
 generated/sql/bookstore_db/bookstore_v1.postgres.sql
+generated/sql/bookstore_db/README.md
 generated/csv/bookstore_db/schema.csv
+generated/csv/bookstore_db/README.md
 ```
 
 The Prisma output is a project you can run immediately:
@@ -228,7 +234,6 @@ All options live in `protorm/v1/annotations.proto`.
 | `unique`, `index` | Single-column constraint / index. |
 | `skip` | Field exists in the proto contract but not the database. |
 | `on_delete` / `on_update` | FK referential action (`CASCADE`, `SET_NULL`, …) for a `resource_reference` field. |
-| `storage` | `STORAGE_MODE_JSON` inlines a message-typed field as a single `JSONB` column instead of relationalizing it into a child table (default: relation). |
 
 ### Plugin options (`opt:` in `buf.gen.yaml`)
 
@@ -254,7 +259,7 @@ common case needs **no annotations**. Each is overridable.
 | Enum hygiene | The AIP `*_UNSPECIFIED = 0` sentinel is dropped; a required enum column defaults to its first value. | `(protorm.v1.col).default_value` |
 | `oneof` integrity | A `oneof` adds a `<oneof>_case` discriminator enum recording which member is set. | — |
 | Soft FK | A `resource_reference` to a model outside the generation set is kept as an indexed scalar column with a `TODO` note, not dropped. | provide the referenced resource |
-| Embedded children | Nested message fields cascade on delete (required) or null (optional). | `(protorm.v1.col).on_delete`, `.storage` |
+| Relationalized nesting | Every user-defined nested message becomes its own child table with a primary key + foreign key — never an opaque `JSONB` blob — so the structure stays queryable. Required links cascade on delete, optional links null. (`map` fields and `google.*` well-known types stay `JSONB`: they can't become tables.) | `(protorm.v1.col).on_delete` |
 
 ---
 
@@ -265,6 +270,7 @@ way to split a multi-service monorepo into the intended database boundaries.
 Pass it with `opt: [config=protorm.yaml]`.
 
 ```yaml
+strip_version: true           # flatten the API version out of derived schema names
 datasources:
   - match: "fleet.**"         # dotted package glob; trailing ** matches any suffix
     database: fleet
@@ -272,7 +278,15 @@ datasources:
   - match: "store.apps.**"
     database: users
     schema: "{leaf}_app"      # leaf package segment (version dropped) → calendar_app
+    strip_version: false      # per-rule override of the top-level default
 ```
+
+`strip_version` (top level, with optional per-rule override) drops a trailing API
+version from the schema name — `bookstore.v1` → schema `bookstore` instead of
+`bookstore_v1` — so you can keep versioned packages without the version leaking
+into every table's namespace. It applies to resource-type-derived and
+config-derived schema names, never to an explicit `(protorm.v1.datasource).schema`
+annotation.
 
 Precedence: a per-file `(protorm.v1.datasource)` annotation wins over the config,
 which wins over the package-path defaults.
@@ -283,10 +297,13 @@ which wins over the package-path defaults.
 
 Generation is **deterministic**: re-running on unchanged protos produces
 byte-identical output (enforced by golden tests), so a regenerate → `prisma
-migrate diff` is a no-op when nothing changed. Name collisions qualify **all**
-participants (never leaving one bare), so adding a new package cannot silently
-rename an existing model and force a destructive migration. Recommended flow:
-regenerate, review the diff, then `migrate diff` / `migrate dev`.
+migrate diff` is a no-op when nothing changed. When two schemas in one database
+share a model or enum name, only **Prisma** qualifies the colliding names (its
+models occupy one global namespace) — and it qualifies **all** participants, so
+adding a new package cannot silently rename an existing model and force a
+destructive migration. The schema-namespaced targets (SQL, GORM, CSV) keep the
+bare name, since the schema or Go package already disambiguates it. Recommended
+flow: regenerate, review the diff, then `migrate diff` / `migrate dev`.
 
 ---
 
@@ -306,7 +323,8 @@ own type system. Highlights:
 | `enum` | a `CREATE TYPE` enum | `enum` | typed string consts |
 | `Timestamp` | `TIMESTAMPTZ` | `DateTime` | `time.Time` |
 | `Duration` | `INTERVAL` | `String` | `string` |
-| message / `map` | `JSONB` | `Json` | `json.RawMessage` |
+| `map` / well-known msg | `JSONB` | `Json` | `json.RawMessage` |
+| nested message | child table (PK + FK) | relation | relation struct |
 | `repeated` scalar | `T[]` | `T[]` | `[]T` |
 
 Unsigned 32/64-bit kinds widen one step (`uint32`→`BIGINT`) so the full range
@@ -318,7 +336,7 @@ too. Nullable columns become pointer (`*T`) / optional (`T?`) types.
 ## Building from source
 
 ```bash
-git clone https://github.com/oh-tarnished/protorm
+git clone https://github.com/the-protobuf-project/protorm
 cd protorm
 go build ./plugin/cmd/protoc-gen-protorm   # the plugin binary
 go test ./...                              # golden + unit tests

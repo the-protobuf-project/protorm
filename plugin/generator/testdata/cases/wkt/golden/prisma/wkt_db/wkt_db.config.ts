@@ -8,7 +8,7 @@
 //
 // Prisma 7 configuration; connection URLs are environment-driven.
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 import { resolve } from "node:path";
 import { config } from "dotenv";

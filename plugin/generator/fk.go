@@ -3,7 +3,7 @@ package generator
 // fk.go holds the foreign-key post-passes that run after resolveRelations:
 // indexing FK columns and degrading unresolved references into soft FKs.
 
-import "github.com/oh-tarnished/protorm/plugin/generator/schema"
+import "github.com/the-protobuf-project/protorm/plugin/generator/schema"
 
 // indexForeignKeys adds a single-column index for every foreign-key column that
 // isn't already covered by one. PostgreSQL indexes primary keys and unique

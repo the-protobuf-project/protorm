@@ -3,8 +3,8 @@ syntax = "proto3";
 package protorm.v1;
 
 // go_package places the generated stubs at protorm/protormpbv1/ in the module
-// root so consumers import github.com/oh-tarnished/protorm/protorm/protormpbv1.
-option go_package = "github.com/oh-tarnished/protorm/protorm/protormpbv1;protormpbv1";
+// root so consumers import github.com/the-protobuf-project/protorm/protorm/protormpbv1.
+option go_package = "github.com/the-protobuf-project/protorm/protorm/protormpbv1;protormpbv1";
 option java_multiple_files = true;
 option java_outer_classname = "DatasourceProto";
 option java_package = "com.protorm.v1";

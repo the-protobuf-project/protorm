@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/naming"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
-	"github.com/oh-tarnished/protorm/plugin/generator/types"
+	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/types"
 )
 
 // uniqueName returns base, or base with the smallest numeric suffix that is not
@@ -50,17 +50,23 @@ func fieldDecl(col *schema.Column, provider types.Provider) string {
 	}
 	switch {
 	case col.Generated != "":
-		b.WriteString(" @default(" + col.Generated + "())") // ulid() / uuid()
+		b.WriteString(" @default(")
+		b.WriteString(col.Generated)
+		b.WriteString("())") // ulid() / uuid()
 	case col.AutoUpdate:
 		b.WriteString(" @updatedAt") // Prisma maintains the value; no @default
 	case col.Default != "":
-		b.WriteString(" @default(" + col.Default + ")")
+		b.WriteString(" @default(")
+		b.WriteString(col.Default)
+		b.WriteString(")")
 	}
 	mapName := col.Name
 	if provider == types.MongoDB && col.PrimaryKey {
 		mapName = "_id" // Mongo documents key on _id; Prisma requires the mapping.
 	}
-	b.WriteString(` @map("` + mapName + `")`)
+	b.WriteString(` @map("`)
+	b.WriteString(mapName)
+	b.WriteString(`")`)
 	return b.String()
 }
 
@@ -72,7 +78,8 @@ func prismaAction(sqlAction string) string {
 	}
 	var b strings.Builder
 	for _, word := range strings.Fields(sqlAction) {
-		b.WriteString(strings.ToUpper(word[:1]) + strings.ToLower(word[1:]))
+		b.WriteString(strings.ToUpper(word[:1]))
+		b.WriteString(strings.ToLower(word[1:]))
 	}
 	return b.String()
 }

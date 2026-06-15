@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/oh-tarnished/protorm/protorm/protormpbv1"
+	"github.com/the-protobuf-project/protorm/protorm/protormpbv1"
 )
 
 // colName returns cOpts.name if set, otherwise the proto field name (already snake_case).

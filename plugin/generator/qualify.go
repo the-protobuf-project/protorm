@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/naming"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
 )
 
 // qualifyModels enforces the Prisma rule that model names occupy one global

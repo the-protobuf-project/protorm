@@ -2,7 +2,7 @@
 
 # {{.Database}} — Prisma schema
 
-Generated from Protobuf by [protoc-gen-protorm](https://github.com/oh-tarnished/protorm).
+Generated from Protobuf by [protoc-gen-protorm](https://github.com/the-protobuf-project/protorm).
 The source of truth is the `.proto` files — regenerate rather than editing these.
 
 ## Layout

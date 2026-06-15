@@ -7,8 +7,8 @@ package generator
 import (
 	"google.golang.org/protobuf/compiler/protogen"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
-	"github.com/oh-tarnished/protorm/protorm/protormpbv1"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/protorm/protormpbv1"
 )
 
 // buildTable maps one resource-annotated message to a *schema.Table.
@@ -17,6 +17,7 @@ func (ctx *buildCtx) buildTable(db *schema.Database, s *schema.Schema, msg *prot
 		Name:         name,
 		Comment:      cleanComment(msg.Comments.Leading),
 		ModelName:    string(msg.Desc.Name()),
+		LocalName:    string(msg.Desc.Name()),
 		ProtoMessage: string(msg.Desc.FullName()),
 		SourceFile:   src,
 		SourceProto:  srcPath,
@@ -42,29 +43,17 @@ func (ctx *buildCtx) buildTable(db *schema.Database, s *schema.Schema, msg *prot
 
 // populateColumns maps msg's fields onto t. Scalar/enum fields become columns;
 // string fields with google.api.resource_reference become FK columns; and
-// user message-typed fields become embed requests (normalized into related
-// tables by normalizeEmbeds) instead of lossy JSONB blobs — unless the field
-// is skipped or pins an explicit column type. Shared by buildTable (resources)
-// and materialize (embedded children).
+// user message-typed fields always become embed requests (normalized into
+// related tables with a primary key + foreign key by normalizeEmbeds) instead
+// of lossy JSONB blobs — unless the field is skipped or pins an explicit column
+// type. Maps and google.* well-known types are not normalizable and keep their
+// scalar/JSONB mapping. Shared by buildTable (resources) and materialize
+// (embedded children).
 func (ctx *buildCtx) populateColumns(db *schema.Database, s *schema.Schema, t *schema.Table, msg *protogen.Message) {
 	for _, f := range msg.Fields {
 		cOpts := colOpts(f)
 		if target := normalizableMessage(f); target != "" && cOpts.GetType() == "" {
 			if cOpts.GetSkip() {
-				continue
-			}
-			// storage=json inlines a message field as a single JSONB column (a
-			// value object or metadata blob) instead of relationalizing it into a
-			// child table. Default (unset/relation) keeps the lossless embed.
-			if cOpts.GetStorage() == protormpbv1.StorageMode_STORAGE_MODE_JSON {
-				notNull := isRequiredField(f)
-				t.Columns = append(t.Columns, &schema.Column{
-					Name:     colName(f, cOpts),
-					Comment:  cleanComment(f.Comments.Leading),
-					SQLType:  "JSONB",
-					NotNull:  notNull,
-					Optional: !notNull,
-				})
 				continue
 			}
 			ctx.embeds = append(ctx.embeds, &embedReq{

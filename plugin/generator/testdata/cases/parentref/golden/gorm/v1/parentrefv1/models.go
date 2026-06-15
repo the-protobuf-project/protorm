@@ -7,7 +7,7 @@
 // database: v1
 // schema:   parentref_v1
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 package parentrefv1
 

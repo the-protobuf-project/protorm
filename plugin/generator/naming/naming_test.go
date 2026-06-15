@@ -120,6 +120,22 @@ func TestScreamingSnake(t *testing.T) {
 	}
 }
 
+func TestStripPackageVersion(t *testing.T) {
+	cases := map[string]string{
+		"bookstore_v1":             "bookstore",
+		"fleet_tracking_device_v1": "fleet_tracking_device",
+		"shop_v2alpha1":            "shop",
+		"calendar_app":             "calendar_app", // no trailing version
+		"public":                   "public",       // single segment
+		"v1":                       "v1",           // version-only: keep, don't empty
+	}
+	for in, want := range cases {
+		if got := StripPackageVersion(in); got != want {
+			t.Errorf("StripPackageVersion(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestSanitizeIdent(t *testing.T) {
 	cases := []struct{ in, want string }{
 		{"FICTION", "FICTION"},
