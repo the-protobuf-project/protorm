@@ -1,2 +1,5 @@
 .DS_Store
 dist/*
+
+# Dev plugin binary built by the justfile (just build / just dev).
+/bin/
