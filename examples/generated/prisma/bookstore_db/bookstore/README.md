@@ -17,7 +17,7 @@ erDiagram
         string id PK
     }
     Book {
-        string name PK
+        string id PK
         string author_id FK
     }
     Book }o--|| Author : "author_id"
@@ -44,14 +44,15 @@ Book is a resource nested under Author. Inferred table: bookstore_v1.books.
 
 | Column | Type | Null |
 | --- | --- | --- |
+| `id` | `CHAR(26)` | not null |
 | `name` | `VARCHAR(255)` | not null |
 | `title` | `VARCHAR(500)` | not null |
 | `author_id` | `CHAR(26)` | not null |
 | `isbn` | `VARCHAR(13)` | nullable |
 | `published_year` | `INTEGER` | nullable |
 | `genre` | `Genre` | not null |
-| `create_time` | `TIMESTAMPTZ` | nullable |
+| `create_time` | `TIMESTAMPTZ` | not null |
 
 ### Enums
 
-- `Genre`: UNSPECIFIED, FICTION, NON_FICTION, SCI_FI, FANTASY
+- `Genre`: FICTION, NON_FICTION, SCI_FI, FANTASY

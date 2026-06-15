@@ -7,13 +7,10 @@
 // database: bookstore_db
 // schemas:  bookstore_v1
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 /// Genre classifies a book's literary category.
 enum Genre {
-  /// Default value; the genre has not been specified.
-  UNSPECIFIED
-
   /// Fictional works: novels, short stories.
   FICTION
 
@@ -63,8 +60,11 @@ model Author {
 
 /// Book is a resource nested under Author. Inferred table: bookstore_v1.books.
 model Book {
+  /// Unique identifier for the record.
+  id String @id @default(ulid()) @map("id")
+
   /// name: IDENTIFIER → PRIMARY KEY, VARCHAR(255).
-  name String @id @map("name")
+  name String @unique @map("name")
 
   /// title: REQUIRED NOT NULL; max_length caps the VARCHAR provider-neutrally.
   title String @map("title")
@@ -82,13 +82,15 @@ model Book {
   publishedYear Int? @map("published_year")
 
   /// genre demonstrates proto enum → database enum generation.
-  genre Genre @map("genre")
+  genre Genre @default(FICTION) @map("genre")
 
   /// create_time is set by the database on insert.
-  createTime DateTime? @default(now()) @map("create_time")
+  createTime DateTime @default(now()) @map("create_time")
 
   /// Composite index on [author_id, published_year].
   @@index([authorID, publishedYear])
+  /// Composite index on [author_id].
+  @@index([authorID])
   /// Maps the model to the "books" table in the database.
   @@map("books")
   /// Maps the model to the "bookstore_v1" schema in the database.

@@ -1,0 +1,8 @@
+# strip_version flattens the API version out of every derived schema name:
+# acme.billing.v1 → schema "acme_billing" instead of "acme_billing_v1". The
+# datasource rule only names the database; the schema is still resource-derived,
+# then version-stripped.
+strip_version: true
+datasources:
+  - match: "acme.**"
+    database: billing_db

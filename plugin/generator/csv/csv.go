@@ -16,9 +16,11 @@ package csv
 import (
 	"bytes"
 	"encoding/csv"
+	"fmt"
 	"strings"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/docs"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
 	"google.golang.org/protobuf/compiler/protogen"
 )
 
@@ -56,6 +58,20 @@ func (g *Generator) Generate(p *protogen.Plugin, dbs []*schema.Database) error {
 		for _, line := range strings.Split(strings.TrimRight(buf.String(), "\n"), "\n") {
 			f.P(line)
 		}
+
+		rf := p.NewGeneratedFile(db.Name+"/README.md", "")
+		md := docs.Render(db, docs.Meta{
+			Title:   "Schema manifest (CSV)",
+			Tagline: "A flat, one-row-per-column manifest — feed to doc tooling or a document-store setup script.",
+			Outputs: []string{
+				"`schema.csv` — header: database, schema, table, column, sql_type, not_null, primary_key, unique, default, description.",
+				"Enum columns report their type as `enum:<name>`; one row is emitted per column across every schema.",
+			},
+			Naming: docs.Local(db),
+		})
+		if _, err := rf.Write([]byte(md)); err != nil {
+			return fmt.Errorf("csv: %s/README.md: %w", db.Name, err)
+		}
 	}
 	return nil
 }
@@ -65,7 +81,8 @@ func (g *Generator) Generate(p *protogen.Plugin, dbs []*schema.Database) error {
 func row(dbName, schemaName, tableName string, col *schema.Column) []string {
 	sqlType := col.SQLType
 	if col.Enum != nil {
-		sqlType = "enum:" + col.Enum.SQLName
+		// Bare, schema-local enum name: the schema column already namespaces it.
+		sqlType = "enum:" + col.Enum.LocalSQLName
 	}
 	return []string{
 		dbName,

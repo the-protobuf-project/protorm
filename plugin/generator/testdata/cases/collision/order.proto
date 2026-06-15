@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package shop.order.v1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+
+option go_package = "example.com/test/gen;collisionv1";
+
+// Money is the order-side resource sharing the simple name "Money" with the
+// cart-side one. See cart.proto for how each target renders the collision.
+message Money {
+  option (google.api.resource) = {
+    type: "shop.order.v1/Money"
+    pattern: "money/{money}"
+    singular: "money"
+    plural: "moneys"
+  };
+
+  // Resource name; the AIP identifier.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // Amount in minor units.
+  int64 amount = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Status is an order-side enum whose simple name collides with cart.Status.
+  Status status = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Status enumerates order fulfillment states.
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_SHIPPED = 1;
+  STATUS_DELIVERED = 2;
+}

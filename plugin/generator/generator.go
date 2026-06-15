@@ -10,11 +10,11 @@ package generator
 import (
 	"fmt"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/csv"
-	"github.com/oh-tarnished/protorm/plugin/generator/gorm"
-	"github.com/oh-tarnished/protorm/plugin/generator/prisma"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
-	sqlgen "github.com/oh-tarnished/protorm/plugin/generator/sql"
+	"github.com/the-protobuf-project/protorm/plugin/generator/csv"
+	"github.com/the-protobuf-project/protorm/plugin/generator/gorm"
+	"github.com/the-protobuf-project/protorm/plugin/generator/prisma"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	sqlgen "github.com/the-protobuf-project/protorm/plugin/generator/sql"
 	"google.golang.org/protobuf/compiler/protogen"
 )
 

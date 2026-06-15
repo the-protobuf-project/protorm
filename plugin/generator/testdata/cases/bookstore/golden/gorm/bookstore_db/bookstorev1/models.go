@@ -7,7 +7,7 @@
 // database: bookstore_db
 // schema:   bookstore_v1
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 package bookstorev1
 

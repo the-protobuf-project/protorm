@@ -11,9 +11,9 @@ import (
 
 	"google.golang.org/protobuf/compiler/protogen"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/naming"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
-	"github.com/oh-tarnished/protorm/plugin/generator/types"
+	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/types"
 )
 
 // buildDatabases converts every generate-flagged file in the plugin request
@@ -74,7 +74,7 @@ func contains(dbs []*schema.Database, db *schema.Database) bool {
 func (ctx *buildCtx) mergeFile(byName map[string]*schema.Database, f *protogen.File) (*schema.Database, error) {
 	ds := datasourceOpts(f)
 	// Precedence for database/schema: annotation > protorm.yaml config > default.
-	cfgDB, cfgSchema := ctx.layout.resolve(string(f.Desc.Package()))
+	cfgDB, cfgSchema, stripVer := ctx.layout.resolve(string(f.Desc.Package()))
 	name := ds.GetDatabase()
 	if name == "" {
 		name = cfgDB
@@ -102,11 +102,16 @@ func (ctx *buildCtx) mergeFile(byName map[string]*schema.Database, f *protogen.F
 		}
 	}
 
+	// An explicit datasource.schema annotation is authoritative and never
+	// version-stripped; a config-derived or resource-type-derived schema obeys
+	// strip_version.
 	schemaOverride := ds.GetSchema()
+	stripOK := false
 	if schemaOverride == "" {
 		schemaOverride = cfgSchema
+		stripOK = stripVer
 	}
-	if added := ctx.addFileTables(db, f, schemaOverride); !added && !ok {
+	if added := ctx.addFileTables(db, f, schemaOverride, stripOK); !added && !ok {
 		delete(byName, name)
 		return nil, nil
 	}
@@ -114,9 +119,10 @@ func (ctx *buildCtx) mergeFile(byName map[string]*schema.Database, f *protogen.F
 }
 
 // addFileTables appends every resource-annotated message in f to db.
-// schemaOverride, when non-empty, replaces the resource-type-derived schema
-// for all tables in this file. Reports whether anything was added.
-func (ctx *buildCtx) addFileTables(db *schema.Database, f *protogen.File, schemaOverride string) bool {
+// schemaOverride, when non-empty, replaces the resource-type-derived schema for
+// all tables in this file; stripVer additionally flattens a trailing API version
+// out of the chosen schema name. Reports whether anything was added.
+func (ctx *buildCtx) addFileTables(db *schema.Database, f *protogen.File, schemaOverride string, stripVer bool) bool {
 	srcPath := f.Desc.Path()
 	src := sourceFileBase(srcPath)
 	added := false
@@ -141,6 +147,9 @@ func (ctx *buildCtx) addFileTables(db *schema.Database, f *protogen.File, schema
 		}
 		if schemaOverride != "" {
 			sName = schemaOverride
+		}
+		if stripVer {
+			sName = naming.StripPackageVersion(sName)
 		}
 		s := schemaByName(db, sName)
 		t := ctx.buildTable(db, s, msg, tName, src, srcPath)

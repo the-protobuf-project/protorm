@@ -12,8 +12,8 @@ import (
 
 	"google.golang.org/genproto/googleapis/api/annotations"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/naming"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
 )
 
 // materializeParents adds a FK column for every parent segment of the resource's

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package protorm.v1;
 
-option go_package = "github.com/oh-tarnished/protorm/protorm/protormpbv1;protormpbv1";
+option go_package = "github.com/the-protobuf-project/protorm/protorm/protormpbv1;protormpbv1";
 option java_multiple_files = true;
 option java_outer_classname = "ColumnProto";
 option java_package = "com.protorm.v1";
@@ -56,24 +56,14 @@ message ColOptions {
   // google.api.resource_reference. Ignored on non-reference fields.
   ReferentialAction on_update = 11;
 
-  // storage selects how a message-typed field is persisted: as a related table
-  // (default) or inlined as a single JSON column for value objects / metadata
-  // blobs. Ignored on scalar and enum fields.
-  StorageMode storage = 12;
-}
-
-// StorageMode selects how a message-typed field is persisted.
-enum StorageMode {
-  // Default: the message field becomes its own related table + foreign key
-  // (lossless relationalization).
-  STORAGE_MODE_UNSPECIFIED = 0;
-
-  // The message field becomes its own related table + foreign key.
-  STORAGE_MODE_RELATION = 1;
-
-  // The message field is inlined as a single JSONB column rather than
-  // relationalized — for value objects and free-form metadata.
-  STORAGE_MODE_JSON = 2;
+  // Field 12 was `StorageMode storage`, which let a message-typed field be
+  // inlined as a single JSONB column. Removed: every user-defined nested message
+  // is always relationalized into a child table with a primary key + foreign
+  // key, so the nested structure is never flattened into an opaque JSON blob.
+  // (Maps and google.* well-known types still map to JSONB — they cannot become
+  // tables.) Reserved so the number/name are never reused.
+  reserved 12;
+  reserved "storage";
 }
 
 // ReferentialAction is the ON DELETE / ON UPDATE behavior of a foreign key

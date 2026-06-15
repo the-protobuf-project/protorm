@@ -7,7 +7,7 @@
 // database: bookstore_db
 // schema:   bookstore_v1
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 package bookstorev1
 
@@ -20,11 +20,10 @@ type Genre string
 
 // Genre values as stored in the database.
 const (
-	GenreUnspecified Genre = "UNSPECIFIED"
-	GenreFiction     Genre = "FICTION"
-	GenreNonFiction  Genre = "NON_FICTION"
-	GenreSciFi       Genre = "SCI_FI"
-	GenreFantasy     Genre = "FANTASY"
+	GenreFiction    Genre = "FICTION"
+	GenreNonFiction Genre = "NON_FICTION"
+	GenreSciFi      Genre = "SCI_FI"
+	GenreFantasy    Genre = "FANTASY"
 )
 
 // Author is a top-level resource. Inferred table: bookstore_v1.authors. id: ID_STRATEGY_ULID synthesizes a generated `id` PK and demotes the AIP resource name to a UNIQUE lookup column; timestamps adds created_at/updated_at.
@@ -49,8 +48,10 @@ func (*Author) TableName() string { return "bookstore_v1.authors" }
 
 // Book is a resource nested under Author. Inferred table: bookstore_v1.books.
 type Book struct {
+	// Unique identifier for the record.
+	ID string `gorm:"column:id;primaryKey;not null" json:"id"`
 	// name: IDENTIFIER → PRIMARY KEY, VARCHAR(255).
-	Name string `gorm:"column:name;primaryKey;not null" json:"name"`
+	Name string `gorm:"column:name;not null;uniqueIndex" json:"name" validate:"required"`
 	// title: REQUIRED NOT NULL; max_length caps the VARCHAR provider-neutrally.
 	Title string `gorm:"column:title;not null" json:"title" validate:"required"`
 	// author_id references Author; protorm infers the FOREIGN KEY, aligns the column type with the referenced PK (CHAR(26) ULID), and applies CASCADE.
@@ -61,9 +62,9 @@ type Book struct {
 	// published_year is a plain integer column; nullable.
 	PublishedYear *int32 `gorm:"column:published_year" json:"published_year,omitempty"`
 	// genre demonstrates proto enum → database enum generation.
-	Genre Genre `gorm:"column:genre;not null" json:"genre" validate:"required"`
+	Genre Genre `gorm:"column:genre;not null;default:'FICTION'" json:"genre" validate:"required"`
 	// create_time is set by the database on insert.
-	CreateTime *time.Time `gorm:"column:create_time;default:now()" json:"create_time,omitempty"`
+	CreateTime time.Time `gorm:"column:create_time;not null;autoCreateTime" json:"create_time"`
 }
 
 func (*Book) TableName() string { return "bookstore_v1.books" }

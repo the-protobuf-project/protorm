@@ -7,7 +7,7 @@
 -- database: v1
 -- schema:   aip_v1
 --
--- protorm — https://github.com/oh-tarnished/protorm
+-- protorm — https://github.com/the-protobuf-project/protorm
 
 CREATE SCHEMA IF NOT EXISTS "aip_v1";
 

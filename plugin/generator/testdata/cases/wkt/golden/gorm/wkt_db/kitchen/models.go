@@ -7,7 +7,7 @@
 // database: wkt_db
 // schema:   kitchen
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 package kitchen
 

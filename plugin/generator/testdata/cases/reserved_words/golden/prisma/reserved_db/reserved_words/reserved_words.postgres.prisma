@@ -7,7 +7,7 @@
 // database: reserved_db
 // schemas:  public
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 /// State is the account lifecycle state.
 enum State {

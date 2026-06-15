@@ -14,10 +14,11 @@ import (
 
 	"google.golang.org/protobuf/compiler/protogen"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/naming"
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
-	"github.com/oh-tarnished/protorm/plugin/generator/templates"
-	"github.com/oh-tarnished/protorm/plugin/generator/types"
+	"github.com/the-protobuf-project/protorm/plugin/generator/docs"
+	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/templates"
+	"github.com/the-protobuf-project/protorm/plugin/generator/types"
 )
 
 // Generator implements schema.Target for GORM Go struct output.
@@ -39,6 +40,29 @@ func (g *Generator) Generate(p *protogen.Plugin, dbs []*schema.Database) error {
 				return fmt.Errorf("gorm: %s/%s: %w", db.Name, pkg, err)
 			}
 		}
+		if err := writeReadme(p, db); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// writeReadme documents the generated package tree: an ER diagram and per-model
+// reference under the bare, schema-local names the Go packages use.
+func writeReadme(p *protogen.Plugin, db *schema.Database) error {
+	rf := p.NewGeneratedFile(db.Name+"/README.md", "")
+	md := docs.Render(db, docs.Meta{
+		Title:   "GORM models",
+		Tagline: "Go structs with GORM struct tags — one package per schema.",
+		Outputs: []string{
+			"`<schema>/models.go` — one Go package per schema, one struct per table.",
+			"Nullable columns are pointer types; proto enums become string-typed Go enums.",
+			"Wire the structs into a `*gorm.DB`; run AutoMigrate, or apply the SQL target's DDL.",
+		},
+		Naming: docs.Local(db),
+	})
+	if _, err := rf.Write([]byte(md)); err != nil {
+		return fmt.Errorf("gorm: %s/README.md: %w", db.Name, err)
 	}
 	return nil
 }

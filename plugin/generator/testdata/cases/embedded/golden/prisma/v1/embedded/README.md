@@ -6,7 +6,7 @@ Generated from Protobuf by protoc-gen-protorm. Source of truth is the `.proto` f
 
 | Models | Enums |
 | ---: | ---: |
-| 3 | 0 |
+| 4 | 0 |
 
 ## Entity relationships
 
@@ -22,14 +22,19 @@ erDiagram
         string attendees FK
         string location_id FK
         string billing_id FK
+        string metadata_id FK
     }
     Location {
+        string id PK
+    }
+    Metadata {
         string id PK
     }
     Attendee }o--|| Event : "event_id"
     Event }o--|| Attendee : "attendees"
     Event }o--|| Location : "location_id"
     Event }o--|| Location : "billing_id"
+    Event }o--|| Metadata : "metadata_id"
 ```
 
 Schema file: [`embedded.postgres.prisma`](./embedded.postgres.prisma)
@@ -45,9 +50,9 @@ Event exercises nested-message normalization: a singular message field becomes a
 | `attendees` | `CHAR(26)` | nullable |
 | `create_time` | `TIMESTAMPTZ` | not null |
 | `labels` | `JSONB` | nullable |
-| `metadata` | `JSONB` | nullable |
 | `location_id` | `VARCHAR(255)` | not null |
 | `billing_id` | `VARCHAR(255)` | nullable |
+| `metadata_id` | `CHAR(26)` | nullable |
 
 ### `Attendee` → `attendees`
 
@@ -69,3 +74,13 @@ Location is reachable from Event and so becomes its own table; its existing `id`
 | `id` | `VARCHAR(255)` | not null |
 | `city` | `VARCHAR(255)` | not null |
 | `venue` | `VARCHAR(255)` | nullable |
+
+### `Metadata` → `metadatas`
+
+Metadata is reachable only through Event.metadata and carries no resource annotation, yet it still becomes its own table (with a synthesized primary key) rather than an inlined JSONB blob.
+
+| Column | Type | Null |
+| --- | --- | --- |
+| `id` | `CHAR(26)` | not null |
+| `source` | `VARCHAR(255)` | nullable |
+| `tags` | `VARCHAR(255)[]` | nullable |

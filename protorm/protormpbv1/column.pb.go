@@ -21,61 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// StorageMode selects how a message-typed field is persisted.
-type StorageMode int32
-
-const (
-	// Default: the message field becomes its own related table + foreign key
-	// (lossless relationalization).
-	StorageMode_STORAGE_MODE_UNSPECIFIED StorageMode = 0
-	// The message field becomes its own related table + foreign key.
-	StorageMode_STORAGE_MODE_RELATION StorageMode = 1
-	// The message field is inlined as a single JSONB column rather than
-	// relationalized — for value objects and free-form metadata.
-	StorageMode_STORAGE_MODE_JSON StorageMode = 2
-)
-
-// Enum value maps for StorageMode.
-var (
-	StorageMode_name = map[int32]string{
-		0: "STORAGE_MODE_UNSPECIFIED",
-		1: "STORAGE_MODE_RELATION",
-		2: "STORAGE_MODE_JSON",
-	}
-	StorageMode_value = map[string]int32{
-		"STORAGE_MODE_UNSPECIFIED": 0,
-		"STORAGE_MODE_RELATION":    1,
-		"STORAGE_MODE_JSON":        2,
-	}
-)
-
-func (x StorageMode) Enum() *StorageMode {
-	p := new(StorageMode)
-	*p = x
-	return p
-}
-
-func (x StorageMode) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (StorageMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_protorm_v1_column_proto_enumTypes[0].Descriptor()
-}
-
-func (StorageMode) Type() protoreflect.EnumType {
-	return &file_protorm_v1_column_proto_enumTypes[0]
-}
-
-func (x StorageMode) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use StorageMode.Descriptor instead.
-func (StorageMode) EnumDescriptor() ([]byte, []int) {
-	return file_protorm_v1_column_proto_rawDescGZIP(), []int{0}
-}
-
 // ReferentialAction is the ON DELETE / ON UPDATE behavior of a foreign key
 // inferred from google.api.resource_reference.
 type ReferentialAction int32
@@ -126,11 +71,11 @@ func (x ReferentialAction) String() string {
 }
 
 func (ReferentialAction) Descriptor() protoreflect.EnumDescriptor {
-	return file_protorm_v1_column_proto_enumTypes[1].Descriptor()
+	return file_protorm_v1_column_proto_enumTypes[0].Descriptor()
 }
 
 func (ReferentialAction) Type() protoreflect.EnumType {
-	return &file_protorm_v1_column_proto_enumTypes[1]
+	return &file_protorm_v1_column_proto_enumTypes[0]
 }
 
 func (x ReferentialAction) Number() protoreflect.EnumNumber {
@@ -139,7 +84,7 @@ func (x ReferentialAction) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ReferentialAction.Descriptor instead.
 func (ReferentialAction) EnumDescriptor() ([]byte, []int) {
-	return file_protorm_v1_column_proto_rawDescGZIP(), []int{1}
+	return file_protorm_v1_column_proto_rawDescGZIP(), []int{0}
 }
 
 // ColOptions overrides column-level generation for a single field.
@@ -180,11 +125,7 @@ type ColOptions struct {
 	OnDelete ReferentialAction `protobuf:"varint,10,opt,name=on_delete,json=onDelete,proto3,enum=protorm.v1.ReferentialAction" json:"on_delete,omitempty"`
 	// on_update sets the FK ON UPDATE referential action for a field carrying
 	// google.api.resource_reference. Ignored on non-reference fields.
-	OnUpdate ReferentialAction `protobuf:"varint,11,opt,name=on_update,json=onUpdate,proto3,enum=protorm.v1.ReferentialAction" json:"on_update,omitempty"`
-	// storage selects how a message-typed field is persisted: as a related table
-	// (default) or inlined as a single JSON column for value objects / metadata
-	// blobs. Ignored on scalar and enum fields.
-	Storage       StorageMode `protobuf:"varint,12,opt,name=storage,proto3,enum=protorm.v1.StorageMode" json:"storage,omitempty"`
+	OnUpdate      ReferentialAction `protobuf:"varint,11,opt,name=on_update,json=onUpdate,proto3,enum=protorm.v1.ReferentialAction" json:"on_update,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -296,19 +237,12 @@ func (x *ColOptions) GetOnUpdate() ReferentialAction {
 	return ReferentialAction_REFERENTIAL_ACTION_UNSPECIFIED
 }
 
-func (x *ColOptions) GetStorage() StorageMode {
-	if x != nil {
-		return x.Storage
-	}
-	return StorageMode_STORAGE_MODE_UNSPECIFIED
-}
-
 var File_protorm_v1_column_proto protoreflect.FileDescriptor
 
 const file_protorm_v1_column_proto_rawDesc = "" +
 	"\n" +
 	"\x17protorm/v1/column.proto\x12\n" +
-	"protorm.v1\"\x9d\x03\n" +
+	"protorm.v1\"\xf9\x02\n" +
 	"\n" +
 	"ColOptions\x12\x16\n" +
 	"\x06column\x18\x01 \x01(\tR\x06column\x12\x12\n" +
@@ -323,20 +257,15 @@ const file_protorm_v1_column_proto_rawDesc = "" +
 	"\x05scale\x18\t \x01(\x05R\x05scale\x12:\n" +
 	"\ton_delete\x18\n" +
 	" \x01(\x0e2\x1d.protorm.v1.ReferentialActionR\bonDelete\x12:\n" +
-	"\ton_update\x18\v \x01(\x0e2\x1d.protorm.v1.ReferentialActionR\bonUpdate\x121\n" +
-	"\astorage\x18\f \x01(\x0e2\x17.protorm.v1.StorageModeR\astorage*]\n" +
-	"\vStorageMode\x12\x1c\n" +
-	"\x18STORAGE_MODE_UNSPECIFIED\x10\x00\x12\x19\n" +
-	"\x15STORAGE_MODE_RELATION\x10\x01\x12\x15\n" +
-	"\x11STORAGE_MODE_JSON\x10\x02*\xdf\x01\n" +
+	"\ton_update\x18\v \x01(\x0e2\x1d.protorm.v1.ReferentialActionR\bonUpdateJ\x04\b\f\x10\rR\astorage*\xdf\x01\n" +
 	"\x11ReferentialAction\x12\"\n" +
 	"\x1eREFERENTIAL_ACTION_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aREFERENTIAL_ACTION_CASCADE\x10\x01\x12\x1f\n" +
 	"\x1bREFERENTIAL_ACTION_RESTRICT\x10\x02\x12\x1f\n" +
 	"\x1bREFERENTIAL_ACTION_SET_NULL\x10\x03\x12\"\n" +
 	"\x1eREFERENTIAL_ACTION_SET_DEFAULT\x10\x04\x12 \n" +
-	"\x1cREFERENTIAL_ACTION_NO_ACTION\x10\x05B`\n" +
-	"\x0ecom.protorm.v1B\vColumnProtoP\x01Z?github.com/oh-tarnished/protorm/protorm/protormpbv1;protormpbv1b\x06proto3"
+	"\x1cREFERENTIAL_ACTION_NO_ACTION\x10\x05Bh\n" +
+	"\x0ecom.protorm.v1B\vColumnProtoP\x01ZGgithub.com/the-protobuf-project/protorm/protorm/protormpbv1;protormpbv1b\x06proto3"
 
 var (
 	file_protorm_v1_column_proto_rawDescOnce sync.Once
@@ -350,22 +279,20 @@ func file_protorm_v1_column_proto_rawDescGZIP() []byte {
 	return file_protorm_v1_column_proto_rawDescData
 }
 
-var file_protorm_v1_column_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_protorm_v1_column_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_protorm_v1_column_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_protorm_v1_column_proto_goTypes = []any{
-	(StorageMode)(0),       // 0: protorm.v1.StorageMode
-	(ReferentialAction)(0), // 1: protorm.v1.ReferentialAction
-	(*ColOptions)(nil),     // 2: protorm.v1.ColOptions
+	(ReferentialAction)(0), // 0: protorm.v1.ReferentialAction
+	(*ColOptions)(nil),     // 1: protorm.v1.ColOptions
 }
 var file_protorm_v1_column_proto_depIdxs = []int32{
-	1, // 0: protorm.v1.ColOptions.on_delete:type_name -> protorm.v1.ReferentialAction
-	1, // 1: protorm.v1.ColOptions.on_update:type_name -> protorm.v1.ReferentialAction
-	0, // 2: protorm.v1.ColOptions.storage:type_name -> protorm.v1.StorageMode
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0, // 0: protorm.v1.ColOptions.on_delete:type_name -> protorm.v1.ReferentialAction
+	0, // 1: protorm.v1.ColOptions.on_update:type_name -> protorm.v1.ReferentialAction
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_protorm_v1_column_proto_init() }
@@ -378,7 +305,7 @@ func file_protorm_v1_column_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protorm_v1_column_proto_rawDesc), len(file_protorm_v1_column_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      1,
 			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,

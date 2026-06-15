@@ -7,7 +7,7 @@ import "protorm/v1/column.proto";
 import "protorm/v1/datasource.proto";
 import "protorm/v1/table.proto";
 
-option go_package = "github.com/oh-tarnished/protorm/protorm/protormpbv1;protormpbv1";
+option go_package = "github.com/the-protobuf-project/protorm/protorm/protormpbv1;protormpbv1";
 option java_multiple_files = true;
 option java_outer_classname = "AnnotationsProto";
 option java_package = "com.protorm.v1";

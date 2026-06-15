@@ -19,26 +19,26 @@ plugins:
     out: examples/generated/prisma
     opt:
       - target=prisma
-      - Mbookstore/v1/bookstore.proto=github.com/oh-tarnished/protorm/examples/gen/bookstore/v1
-      - Mbookstore/v1/inventory.proto=github.com/oh-tarnished/protorm/examples/gen/bookstore/v1
+      - Mbookstore/v1/bookstore.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
+      - Mbookstore/v1/inventory.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
 
   - local: protoc-gen-protorm
     out: examples/generated/gorm
     opt:
       - target=gorm
-      - Mbookstore/v1/bookstore.proto=github.com/oh-tarnished/protorm/examples/gen/bookstore/v1
-      - Mbookstore/v1/inventory.proto=github.com/oh-tarnished/protorm/examples/gen/bookstore/v1
+      - Mbookstore/v1/bookstore.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
+      - Mbookstore/v1/inventory.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
 
   - local: protoc-gen-protorm
     out: examples/generated/sql
     opt:
       - target=sql
-      - Mbookstore/v1/bookstore.proto=github.com/oh-tarnished/protorm/examples/gen/bookstore/v1
-      - Mbookstore/v1/inventory.proto=github.com/oh-tarnished/protorm/examples/gen/bookstore/v1
+      - Mbookstore/v1/bookstore.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
+      - Mbookstore/v1/inventory.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
 
   - local: protoc-gen-protorm
     out: examples/generated/csv
     opt:
       - target=csv
-      - Mbookstore/v1/bookstore.proto=github.com/oh-tarnished/protorm/examples/gen/bookstore/v1
-      - Mbookstore/v1/inventory.proto=github.com/oh-tarnished/protorm/examples/gen/bookstore/v1
+      - Mbookstore/v1/bookstore.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
+      - Mbookstore/v1/inventory.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1

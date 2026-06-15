@@ -5,7 +5,7 @@ package generator
 // at, and synthesizing the scalar FK column + constraint that links parent and
 // child. Split out of embed.go to keep both files small and single-purpose.
 
-import "github.com/oh-tarnished/protorm/plugin/generator/schema"
+import "github.com/the-protobuf-project/protorm/plugin/generator/schema"
 
 // embedAction picks the default ON DELETE for a synthesized embed relation when
 // the proto sets none. An embedded message is a value object owned by its

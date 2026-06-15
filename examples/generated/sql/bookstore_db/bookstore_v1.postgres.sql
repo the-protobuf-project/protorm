@@ -7,12 +7,12 @@
 -- database: bookstore_db
 -- schema:   bookstore_v1
 --
--- protorm — https://github.com/oh-tarnished/protorm
+-- protorm — https://github.com/the-protobuf-project/protorm
 
 CREATE SCHEMA IF NOT EXISTS "bookstore_v1";
 
 -- Genre classifies a book's literary category.
-CREATE TYPE "bookstore_v1"."genre" AS ENUM ('UNSPECIFIED', 'FICTION', 'NON_FICTION', 'SCI_FI', 'FANTASY');
+CREATE TYPE "bookstore_v1"."genre" AS ENUM ('FICTION', 'NON_FICTION', 'SCI_FI', 'FANTASY');
 
 -- Author is a top-level resource. Inferred table: bookstore_v1.authors. id: ID_STRATEGY_ULID synthesizes a generated `id` PK and demotes the AIP resource name to a UNIQUE lookup column; timestamps adds created_at/updated_at.
 CREATE TABLE "bookstore_v1"."authors" (
@@ -32,8 +32,10 @@ CREATE TABLE "bookstore_v1"."authors" (
 
 -- Book is a resource nested under Author. Inferred table: bookstore_v1.books.
 CREATE TABLE "bookstore_v1"."books" (
+    -- Unique identifier for the record.
+    "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- name: IDENTIFIER → PRIMARY KEY, VARCHAR(255).
-    "name"  VARCHAR(255)  NOT NULL  PRIMARY KEY,
+    "name"  VARCHAR(255)  NOT NULL  UNIQUE,
     -- title: REQUIRED NOT NULL; max_length caps the VARCHAR provider-neutrally.
     "title"  VARCHAR(500)  NOT NULL,
     -- author_id references Author; protorm infers the FOREIGN KEY, aligns the column type with the referenced PK (CHAR(26) ULID), and applies CASCADE.
@@ -43,9 +45,10 @@ CREATE TABLE "bookstore_v1"."books" (
     -- published_year is a plain integer column; nullable.
     "published_year"  INTEGER,
     -- genre demonstrates proto enum → database enum generation.
-    "genre"  "bookstore_v1"."genre"  NOT NULL,
+    "genre"  "bookstore_v1"."genre"  NOT NULL  DEFAULT 'FICTION',
     -- create_time is set by the database on insert.
-    "create_time"  TIMESTAMPTZ  DEFAULT now(),
+    "create_time"  TIMESTAMPTZ  NOT NULL  DEFAULT now(),
     CONSTRAINT "fk_books_author_id" FOREIGN KEY ("author_id") REFERENCES "bookstore_v1"."authors"("id") ON DELETE CASCADE
 );
 CREATE INDEX "idx_books_author_year" ON "bookstore_v1"."books" ("author_id", "published_year");
+CREATE INDEX "idx_books_author_id" ON "bookstore_v1"."books" ("author_id");

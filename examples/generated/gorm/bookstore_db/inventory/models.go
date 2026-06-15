@@ -7,7 +7,7 @@
 // database: bookstore_db
 // schema:   inventory
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 package inventory
 
@@ -17,8 +17,10 @@ import (
 
 // Shelf groups books physically. The resource's `plural` fixes the irregular plural ("shelfs" → "shelves") — no table name override needed.
 type Shelf struct {
+	// Unique identifier for the record.
+	ID string `gorm:"column:id;primaryKey;not null" json:"id"`
 	// name: IDENTIFIER → PRIMARY KEY, VARCHAR(255).
-	Name string `gorm:"column:name;primaryKey;not null" json:"name"`
+	Name string `gorm:"column:name;not null;uniqueIndex" json:"name" validate:"required"`
 	// theme: REQUIRED → NOT NULL VARCHAR(255).
 	Theme string `gorm:"column:theme;not null" json:"theme" validate:"required"`
 	// capacity is the number of books the shelf holds; nullable INTEGER.

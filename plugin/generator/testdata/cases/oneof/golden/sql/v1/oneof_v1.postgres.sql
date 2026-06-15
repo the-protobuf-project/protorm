@@ -7,7 +7,7 @@
 -- database: v1
 -- schema:   oneof_v1
 --
--- protorm — https://github.com/oh-tarnished/protorm
+-- protorm — https://github.com/the-protobuf-project/protorm
 
 CREATE SCHEMA IF NOT EXISTS "oneof_v1";
 

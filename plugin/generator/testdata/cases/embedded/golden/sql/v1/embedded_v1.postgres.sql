@@ -7,7 +7,7 @@
 -- database: v1
 -- schema:   embedded_v1
 --
--- protorm — https://github.com/oh-tarnished/protorm
+-- protorm — https://github.com/the-protobuf-project/protorm
 
 CREATE SCHEMA IF NOT EXISTS "embedded_v1";
 
@@ -23,19 +23,21 @@ CREATE TABLE "embedded_v1"."events" (
     "create_time"  TIMESTAMPTZ  NOT NULL  DEFAULT now(),
     -- Map fields stay JSONB.
     "labels"  JSONB,
-    -- storage=json inlines this message as a single JSONB column instead of relationalizing it into a child table (P1.6 embed-vs-relation control).
-    "metadata"  JSONB,
     -- Foreign key to Location.
     "location_id"  VARCHAR(255)  NOT NULL,
     -- Foreign key to Location.
     "billing_id"  VARCHAR(255),
+    -- Foreign key to Metadata.
+    "metadata_id"  CHAR(26),
     CONSTRAINT "fk_events_attendees" FOREIGN KEY ("attendees") REFERENCES "embedded_v1"."attendees"("id"),
     CONSTRAINT "fk_events_location_id" FOREIGN KEY ("location_id") REFERENCES "embedded_v1"."locations"("id") ON DELETE CASCADE,
-    CONSTRAINT "fk_events_billing_id" FOREIGN KEY ("billing_id") REFERENCES "embedded_v1"."locations"("id") ON DELETE SET NULL
+    CONSTRAINT "fk_events_billing_id" FOREIGN KEY ("billing_id") REFERENCES "embedded_v1"."locations"("id") ON DELETE SET NULL,
+    CONSTRAINT "fk_events_metadata_id" FOREIGN KEY ("metadata_id") REFERENCES "embedded_v1"."metadatas"("id") ON DELETE SET NULL
 );
 CREATE INDEX "idx_events_attendees" ON "embedded_v1"."events" ("attendees");
 CREATE INDEX "idx_events_location_id" ON "embedded_v1"."events" ("location_id");
 CREATE INDEX "idx_events_billing_id" ON "embedded_v1"."events" ("billing_id");
+CREATE INDEX "idx_events_metadata_id" ON "embedded_v1"."events" ("metadata_id");
 
 -- Attendee carries an IDENTIFIER, so that field is its primary key.
 CREATE TABLE "embedded_v1"."attendees" (
@@ -59,4 +61,14 @@ CREATE TABLE "embedded_v1"."locations" (
     "city"  VARCHAR(255)  NOT NULL,
     -- Venue name within the city.
     "venue"  VARCHAR(255)
+);
+
+-- Metadata is reachable only through Event.metadata and carries no resource annotation, yet it still becomes its own table (with a synthesized primary key) rather than an inlined JSONB blob.
+CREATE TABLE "embedded_v1"."metadatas" (
+    -- Unique identifier for the record.
+    "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
+    -- Free-form source system label.
+    "source"  VARCHAR(255),
+    -- Arbitrary tags.
+    "tags"  VARCHAR(255)[]
 );

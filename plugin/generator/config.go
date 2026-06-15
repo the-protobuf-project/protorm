@@ -18,6 +18,12 @@ import (
 // layoutConfig is the parsed protorm.yaml.
 type layoutConfig struct {
 	Datasources []matchRule `yaml:"datasources"`
+	// StripVersion, when true, flattens the API version out of every derived
+	// schema name ("bookstore.v1" → schema "bookstore" instead of "bookstore_v1").
+	// It applies to resource-type-derived and config-derived schema names, but
+	// never to an explicit (protorm.v1.datasource).schema annotation. A per-rule
+	// strip_version overrides this default for that rule.
+	StripVersion bool `yaml:"strip_version"`
 }
 
 // matchRule assigns every proto package matching Match to a database and schema.
@@ -33,6 +39,10 @@ type matchRule struct {
 	// SchemaDepth, when >0 and Schema is empty, joins the first N package
 	// segments with "_" to form the schema name.
 	SchemaDepth int `yaml:"schema_depth"`
+	// StripVersion overrides the top-level strip_version for packages this rule
+	// matches. Nil (the default) inherits the global setting; set it explicitly
+	// (true/false) to force version stripping on or off for this datasource.
+	StripVersion *bool `yaml:"strip_version"`
 }
 
 // loadLayoutConfig reads protorm.yaml from path. A blank path yields nil (no
@@ -52,19 +62,25 @@ func loadLayoutConfig(path string) (*layoutConfig, error) {
 	return &c, nil
 }
 
-// resolve returns the database and schema for a proto package under the first
-// matching rule, or empty strings when nothing matches (nil-safe).
-func (c *layoutConfig) resolve(pkg string) (database, schema string) {
+// resolve returns the database, schema, and version-stripping decision for a
+// proto package under the first matching rule, or the global default when no
+// rule matches (nil-safe). stripVer reflects the per-rule strip_version when
+// set, otherwise the top-level strip_version.
+func (c *layoutConfig) resolve(pkg string) (database, schema string, stripVer bool) {
 	if c == nil {
-		return "", ""
+		return "", "", false
 	}
 	segs := strings.Split(pkg, ".")
 	for _, r := range c.Datasources {
 		if matchPackage(r.Match, segs) {
-			return r.Database, ruleSchema(r, segs)
+			sv := c.StripVersion
+			if r.StripVersion != nil {
+				sv = *r.StripVersion
+			}
+			return r.Database, ruleSchema(r, segs), sv
 		}
 	}
-	return "", ""
+	return "", "", c.StripVersion
 }
 
 // ruleSchema computes the schema name a matched rule assigns to a package.

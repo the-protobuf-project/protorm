@@ -7,7 +7,7 @@
 // database: v1
 // schemas:  embedded_v1
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 /// Event exercises nested-message normalization: a singular message field becomes a belongs-to relation, a repeated message field becomes a has-many, while well-known and map fields stay scalar / JSONB.
 model Event {
@@ -29,9 +29,6 @@ model Event {
   /// Map fields stay JSONB.
   labels Json? @map("labels")
 
-  /// storage=json inlines this message as a single JSONB column instead of relationalizing it into a child table (P1.6 embed-vs-relation control).
-  metadata Json? @map("metadata")
-
   /// Foreign key to Location.
   locationID String @map("location_id")
 
@@ -44,6 +41,12 @@ model Event {
   /// Relation to Location via billing_id.
   billing Location? @relation("EventBilling", fields: [billingID], references: [id], onDelete: SetNull)
 
+  /// Foreign key to Metadata.
+  metadataID String? @map("metadata_id")
+
+  /// Relation to Metadata via metadata_id.
+  metadata Metadata? @relation(fields: [metadataID], references: [id], onDelete: SetNull)
+
   /// Back-relation: Attendee records that reference this model via event_id.
   attendees3 Attendee[] @relation("AttendeeEvent")
 
@@ -53,6 +56,8 @@ model Event {
   @@index([locationID])
   /// Composite index on [billing_id].
   @@index([billingID])
+  /// Composite index on [metadata_id].
+  @@index([metadataID])
   /// Maps the model to the "events" table in the database.
   @@map("events")
   /// Maps the model to the "embedded_v1" schema in the database.
@@ -106,6 +111,26 @@ model Location {
 
   /// Maps the model to the "locations" table in the database.
   @@map("locations")
+  /// Maps the model to the "embedded_v1" schema in the database.
+  @@schema("embedded_v1")
+}
+
+/// Metadata is reachable only through Event.metadata and carries no resource annotation, yet it still becomes its own table (with a synthesized primary key) rather than an inlined JSONB blob.
+model Metadata {
+  /// Unique identifier for the record.
+  id String @id @default(ulid()) @map("id")
+
+  /// Free-form source system label.
+  source String? @map("source")
+
+  /// Arbitrary tags.
+  tags String[] @map("tags")
+
+  /// Back-relation: Event records that reference this model via metadata_id.
+  events Event[]
+
+  /// Maps the model to the "metadatas" table in the database.
+  @@map("metadatas")
   /// Maps the model to the "embedded_v1" schema in the database.
   @@schema("embedded_v1")
 }

@@ -1,4 +1,4 @@
-module github.com/oh-tarnished/protorm
+module github.com/the-protobuf-project/protorm
 
 go 1.26.4
 

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/oh-tarnished/protorm/plugin/generator/schema"
-	"github.com/oh-tarnished/protorm/plugin/generator/types"
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/types"
 )
 
 // goType returns the Go type for a column: enums use their generated Go type,
@@ -18,7 +18,7 @@ import (
 func goType(col *schema.Column) string {
 	var base string
 	if col.Enum != nil {
-		base = col.Enum.Name
+		base = col.Enum.LocalName // package-namespaced: bare enum type name
 	} else {
 		base = types.GoType(col.SQLType)
 	}

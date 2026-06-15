@@ -19,7 +19,7 @@ func TestRender(t *testing.T) {
 		"// database: bookstore_db\n" +
 		"// schema:   bookstore_v1\n" +
 		"//\n" +
-		"// protorm — https://github.com/oh-tarnished/protorm"
+		"// protorm — https://github.com/the-protobuf-project/protorm"
 	if got != want {
 		t.Errorf("Render mismatch:\n got:\n%s\nwant:\n%s", got, want)
 	}
@@ -44,7 +44,7 @@ func TestRenderSQLPrefixUnknownVersionsAndNotes(t *testing.T) {
 		"--\n" +
 		"-- a note.\n" +
 		"--\n" +
-		"-- protorm — https://github.com/oh-tarnished/protorm"
+		"-- protorm — https://github.com/the-protobuf-project/protorm"
 	if got != want {
 		t.Errorf("Render mismatch:\n got:\n%s\nwant:\n%s", got, want)
 	}

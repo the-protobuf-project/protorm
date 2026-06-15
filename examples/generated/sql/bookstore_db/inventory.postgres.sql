@@ -7,14 +7,16 @@
 -- database: bookstore_db
 -- schema:   inventory
 --
--- protorm — https://github.com/oh-tarnished/protorm
+-- protorm — https://github.com/the-protobuf-project/protorm
 
 CREATE SCHEMA IF NOT EXISTS "inventory";
 
 -- Shelf groups books physically. The resource's `plural` fixes the irregular plural ("shelfs" → "shelves") — no table name override needed.
 CREATE TABLE "inventory"."shelves" (
+    -- Unique identifier for the record.
+    "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- name: IDENTIFIER → PRIMARY KEY, VARCHAR(255).
-    "name"  VARCHAR(255)  NOT NULL  PRIMARY KEY,
+    "name"  VARCHAR(255)  NOT NULL  UNIQUE,
     -- theme: REQUIRED → NOT NULL VARCHAR(255).
     "theme"  VARCHAR(255)  NOT NULL,
     -- capacity is the number of books the shelf holds; nullable INTEGER.

@@ -82,8 +82,8 @@ const file_protorm_v1_annotations_proto_rawDesc = "" +
 	"datasource\x12\x1c.google.protobuf.FileOptions\x18І\x03 \x01(\v2\x1d.protorm.v1.DatasourceOptionsR\n" +
 	"datasource:Q\n" +
 	"\x05table\x12\x1f.google.protobuf.MessageOptions\x18ц\x03 \x01(\v2\x18.protorm.v1.TableOptionsR\x05table:I\n" +
-	"\x03col\x12\x1d.google.protobuf.FieldOptions\x18҆\x03 \x01(\v2\x16.protorm.v1.ColOptionsR\x03colBe\n" +
-	"\x0ecom.protorm.v1B\x10AnnotationsProtoP\x01Z?github.com/oh-tarnished/protorm/protorm/protormpbv1;protormpbv1b\x06proto3"
+	"\x03col\x12\x1d.google.protobuf.FieldOptions\x18҆\x03 \x01(\v2\x16.protorm.v1.ColOptionsR\x03colBm\n" +
+	"\x0ecom.protorm.v1B\x10AnnotationsProtoP\x01ZGgithub.com/the-protobuf-project/protorm/protorm/protormpbv1;protormpbv1b\x06proto3"
 
 var file_protorm_v1_annotations_proto_goTypes = []any{
 	(*descriptorpb.FileOptions)(nil),    // 0: google.protobuf.FileOptions

@@ -7,7 +7,7 @@
 // database: wkt_db
 // schemas:  kitchen
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 /// Sink is one table holding every interesting type mapping.
 model Sink {

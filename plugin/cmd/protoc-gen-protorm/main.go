@@ -4,7 +4,7 @@
 //
 // # Install
 //
-//	go install github.com/oh-tarnished/protorm/plugin/cmd/protoc-gen-protorm@latest
+//	go install github.com/the-protobuf-project/protorm/plugin/cmd/protoc-gen-protorm@latest
 //
 // # Usage via buf.gen.yaml
 //
@@ -27,7 +27,7 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/oh-tarnished/protorm/plugin/generator"
+	"github.com/the-protobuf-project/protorm/plugin/generator"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/pluginpb"
 )
@@ -57,7 +57,7 @@ func resolveVersion() string {
 		return v
 	}
 	for _, dep := range bi.Deps {
-		if dep.Path == "github.com/oh-tarnished/protorm" && dep.Version != "" {
+		if dep.Path == "github.com/the-protobuf-project/protorm" && dep.Version != "" {
 			return dep.Version
 		}
 	}

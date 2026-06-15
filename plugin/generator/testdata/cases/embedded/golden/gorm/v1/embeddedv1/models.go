@@ -7,7 +7,7 @@
 // database: v1
 // schema:   embedded_v1
 //
-// protorm — https://github.com/oh-tarnished/protorm
+// protorm — https://github.com/the-protobuf-project/protorm
 
 package embeddedv1
 
@@ -29,14 +29,15 @@ type Event struct {
 	CreateTime time.Time `gorm:"column:create_time;not null;autoCreateTime" json:"create_time"`
 	// Map fields stay JSONB.
 	Labels json.RawMessage `gorm:"column:labels" json:"labels,omitempty"`
-	// storage=json inlines this message as a single JSONB column instead of relationalizing it into a child table (P1.6 embed-vs-relation control).
-	Metadata json.RawMessage `gorm:"column:metadata" json:"metadata,omitempty"`
 	// Foreign key to Location.
 	LocationID string    `gorm:"column:location_id;not null" json:"location_id" validate:"required"`
 	Location   *Location `gorm:"foreignKey:LocationID;constraint:OnDelete:CASCADE" json:"location,omitempty"`
 	// Foreign key to Location.
 	BillingID *string   `gorm:"column:billing_id" json:"billing_id,omitempty"`
 	Billing   *Location `gorm:"foreignKey:BillingID;constraint:OnDelete:SET NULL" json:"billing,omitempty"`
+	// Foreign key to Metadata.
+	MetadataID *string   `gorm:"column:metadata_id" json:"metadata_id,omitempty"`
+	Metadata   *Metadata `gorm:"foreignKey:MetadataID;constraint:OnDelete:SET NULL" json:"metadata,omitempty"`
 	// Back-relation: Attendee records that reference this via event_id.
 	Attendees3 []Attendee `gorm:"foreignKey:EventID" json:"attendees3,omitempty"`
 }
@@ -75,3 +76,17 @@ type Location struct {
 }
 
 func (*Location) TableName() string { return "embedded_v1.locations" }
+
+// Metadata is reachable only through Event.metadata and carries no resource annotation, yet it still becomes its own table (with a synthesized primary key) rather than an inlined JSONB blob.
+type Metadata struct {
+	// Unique identifier for the record.
+	ID string `gorm:"column:id;primaryKey;not null" json:"id"`
+	// Free-form source system label.
+	Source *string `gorm:"column:source" json:"source,omitempty"`
+	// Arbitrary tags.
+	Tags []string `gorm:"column:tags" json:"tags,omitempty"`
+	// Back-relation: Event records that reference this via metadata_id.
+	Events []Event `gorm:"foreignKey:MetadataID" json:"events,omitempty"`
+}
+
+func (*Metadata) TableName() string { return "embedded_v1.metadatas" }
