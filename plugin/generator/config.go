@@ -24,6 +24,15 @@ type layoutConfig struct {
 	// never to an explicit (protorm.v1.datasource).schema annotation. A per-rule
 	// strip_version overrides this default for that rule.
 	StripVersion bool `yaml:"strip_version"`
+
+	// DedupeSchemaTable, when true, renames a table whose name would stutter with
+	// its schema in a schema-qualified identifier ("booking" schema + "bookings"
+	// table → "bookingBookings" in tools that join schema+table, e.g. Hasura).
+	// The redundant leading schema word is stripped from the table name, or — for
+	// the schema's eponymous/primary table, where stripping leaves nothing — the
+	// table is renamed to a generic word ("resource", then "entity"/…). Only the
+	// generated table name changes; proto/model names are untouched. See destutter.go.
+	DedupeSchemaTable bool `yaml:"dedupe_schema_table"`
 }
 
 // matchRule assigns every proto package matching Match to a database and schema.

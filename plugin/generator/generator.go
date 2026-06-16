@@ -90,7 +90,6 @@ func Generate(p *protogen.Plugin, opts Options) error {
 		return fmt.Errorf("protorm: schema inference failed: %w", err)
 	}
 	lint(p, diags)
-	lintSchemaStutter(dbs, diags)
 	if err := diags.resolve(opts.Strict); err != nil {
 		return err
 	}

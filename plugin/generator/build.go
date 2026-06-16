@@ -52,7 +52,13 @@ func buildDatabases(p *protogen.Plugin, diags *diagnostics, layout *layoutConfig
 	// after embeds so every potential target table already exists.
 	ctx.normalizeM2M(diags)
 
+	dedupeSchemaTable := layout != nil && layout.DedupeSchemaTable
 	for _, db := range order {
+		// Rename schema-stuttering table names before relations resolve, so FK
+		// references pick up the final names (opt-in via protorm.yaml).
+		if dedupeSchemaTable {
+			deStutterTables(db)
+		}
 		qualifyModels(db, diags)
 		resolveRelations(db, diags)
 		dedupeEnums(db, diags)
