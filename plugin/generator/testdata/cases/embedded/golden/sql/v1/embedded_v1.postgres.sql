@@ -18,7 +18,7 @@ CREATE TABLE "embedded_v1"."events" (
     -- Resource name; the AIP identifier.
     "name"  VARCHAR(255)  NOT NULL  UNIQUE,
     -- Repeated attendee resource names.
-    "attendees"  CHAR(26),
+    "attendees"  VARCHAR(255)[],
     -- Well-known type stays a scalar column, not a relation.
     "create_time"  TIMESTAMPTZ  NOT NULL  DEFAULT now(),
     -- Map fields stay JSONB.
@@ -29,12 +29,10 @@ CREATE TABLE "embedded_v1"."events" (
     "billing_id"  VARCHAR(255),
     -- Foreign key to Metadata.
     "metadata_id"  CHAR(26),
-    CONSTRAINT "fk_events_attendees" FOREIGN KEY ("attendees") REFERENCES "embedded_v1"."attendees"("id"),
     CONSTRAINT "fk_events_location_id" FOREIGN KEY ("location_id") REFERENCES "embedded_v1"."locations"("id") ON DELETE CASCADE,
     CONSTRAINT "fk_events_billing_id" FOREIGN KEY ("billing_id") REFERENCES "embedded_v1"."locations"("id") ON DELETE SET NULL,
     CONSTRAINT "fk_events_metadata_id" FOREIGN KEY ("metadata_id") REFERENCES "embedded_v1"."metadatas"("id") ON DELETE SET NULL
 );
-CREATE INDEX "idx_events_attendees" ON "embedded_v1"."events" ("attendees");
 CREATE INDEX "idx_events_location_id" ON "embedded_v1"."events" ("location_id");
 CREATE INDEX "idx_events_billing_id" ON "embedded_v1"."events" ("billing_id");
 CREATE INDEX "idx_events_metadata_id" ON "embedded_v1"."events" ("metadata_id");

@@ -18,7 +18,7 @@ type modelView struct {
 	Fields                   []fieldView
 }
 
-type enumValueView struct{ ConstName, TypeName, MapName string }
+type enumValueView struct{ Comment, ConstName, TypeName, MapName string }
 
 type enumView struct {
 	Comment, Name string
@@ -34,6 +34,15 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 	// models (FK / has-many targets) carry the globally-qualified ModelName,
 	// which loc translates back to the local name they're declared under.
 	loc := localNameFunc(db)
+	// inThisSchema reports whether a model is declared in the schema being
+	// rendered. Association struct fields (BelongsTo / HasMany) reference the
+	// related Go type directly, so they can only be emitted for same-package
+	// (same-schema) targets. Cross-schema relations would need an import — and
+	// since references can be cyclic (identity ↔ organisation), importing would
+	// create an import cycle — so those association fields are omitted. The
+	// scalar FK column is kept, and the DB-level relation still appears in the
+	// Prisma and SQL targets.
+	inThisSchema := modelSchemaSet(db, s.Name)
 
 	for _, t := range s.Tables {
 		m := modelView{
@@ -60,7 +69,8 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 			// BelongsTo association: emitted alongside the FK column. The field is
 			// named after the FK column (minus _id) so multiple references to the
 			// same model stay distinct; GORM resolves the link via foreignKey.
-			if col.FKModel != "" {
+			// Skipped for cross-schema targets (see inThisSchema).
+			if col.FKModel != "" && inThisSchema(col.FKModel) {
 				assoc := uniqueGoName(naming.PascalGo(naming.StripIDSuffix(col.Name)), used)
 				m.Fields = append(m.Fields, fieldView{
 					Decl: assoc + " *" + loc(col.FKModel) +
@@ -69,8 +79,12 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 				})
 			}
 		}
-		// HasMany back-references (e.g. Author.Books []Book).
+		// HasMany back-references (e.g. Author.Books []Book). Same-schema only:
+		// the child type lives in another package otherwise (see inThisSchema).
 		for _, hm := range t.HasMany {
+			if !inThisSchema(hm.Model) {
+				continue
+			}
 			field := uniqueGoName(naming.PascalGo(hm.Field), used)
 			childModel := loc(hm.Model)
 			m.Fields = append(m.Fields, fieldView{
@@ -117,6 +131,7 @@ func enumViews(s *schema.Schema) []enumView {
 		}
 		for _, v := range e.Values {
 			ev.Values = append(ev.Values, enumValueView{
+				Comment:   v.Comment,
 				ConstName: e.LocalName + naming.PascalGo(strings.ToLower(v.Name)),
 				TypeName:  e.LocalName,
 				MapName:   v.MapName,
@@ -125,6 +140,24 @@ func enumViews(s *schema.Schema) []enumView {
 		out = append(out, ev)
 	}
 	return out
+}
+
+// modelSchemaSet returns a predicate reporting whether a model (by its
+// globally-qualified ModelName) is declared in the named schema — i.e. lives in
+// the same Go package as the structs being rendered. Used to gate cross-schema
+// association fields, which can't reference another package's type without an
+// import (and references can be cyclic).
+func modelSchemaSet(db *schema.Database, schemaName string) func(string) bool {
+	here := map[string]bool{}
+	for _, s := range db.Schemas {
+		if s.Name != schemaName {
+			continue
+		}
+		for _, t := range s.Tables {
+			here[t.ModelName] = true
+		}
+	}
+	return func(model string) bool { return here[model] }
 }
 
 // localNameFunc returns a translator from a model's globally-qualified ModelName

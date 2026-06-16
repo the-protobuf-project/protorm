@@ -75,6 +75,15 @@ func (ctx *buildCtx) populateColumns(db *schema.Database, s *schema.Schema, t *s
 			t.PKColumn = col.Name
 		}
 		if ref := resourceRef(f); ref != nil {
+			// A repeated resource_reference is a list of resource names, not a
+			// single foreign key — a scalar FK column can't hold many parents.
+			// Keep it as the array column buildColumn already produced (T[]); a
+			// proper relation here would need a join table, which protorm does not
+			// synthesize. Modeling it as a single FK would silently drop the list
+			// (and collide field names, e.g. exceptions/exceptions2).
+			if f.Desc.IsList() {
+				continue
+			}
 			refSchema, refTable := schemaTable(ref.GetType(), "")
 			refModel := modelNameFromType(ref.GetType())
 			col.FKModel = refModel

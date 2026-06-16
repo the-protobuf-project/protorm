@@ -19,7 +19,6 @@ erDiagram
     }
     Event {
         string id PK
-        string attendees FK
         string location_id FK
         string billing_id FK
         string metadata_id FK
@@ -31,7 +30,6 @@ erDiagram
         string id PK
     }
     Attendee }o--|| Event : "event_id"
-    Event }o--|| Attendee : "attendees"
     Event }o--|| Location : "location_id"
     Event }o--|| Location : "billing_id"
     Event }o--|| Metadata : "metadata_id"

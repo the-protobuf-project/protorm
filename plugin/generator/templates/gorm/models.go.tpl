@@ -15,6 +15,9 @@ type {{.Name}} string
 // {{.Name}} values as stored in the database.
 const (
 {{- range .Values}}
+{{- if .Comment}}
+	// {{.Comment}}
+{{- end}}
 	{{.ConstName}} {{.TypeName}} = "{{.MapName}}"
 {{- end}}
 )

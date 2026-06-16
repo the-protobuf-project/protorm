@@ -84,8 +84,58 @@ func SnakeCase(s string) string {
 	return strings.ToLower(b.String())
 }
 
-// SnakePlural converts PascalCase to snake_case + "s". "BookAuthor" → "book_authors".
-func SnakePlural(s string) string { return SnakeCase(s) + "s" }
+// SnakePlural converts PascalCase to a snake_case table name and pluralizes the
+// final word with English inflection rules: "BookAuthor" → "book_authors",
+// "CancellationPolicy" → "cancellation_policies", "BufferSettings" →
+// "buffer_settings" (already plural, no double-s), "Box" → "boxes". Used only
+// when no authoritative plural is available (a nested child table, or a resource
+// without google.api.resource.plural); annotated plurals win upstream.
+func SnakePlural(s string) string { return Pluralize(SnakeCase(s)) }
+
+// Pluralize returns the English plural of a lower_snake_case noun, inflecting
+// only the final underscore-separated word. The rules cover the cases a schema
+// actually hits without pulling in a full inflection library:
+//   - ends in a sibilant ("s", "x", "z", "ch", "sh") → keep "s"/"x"… resolved
+//     below; a word already ending in "s" is left unchanged so plural-form
+//     message names ("settings", "constraints") don't become "settingss".
+//   - consonant + "y" → "ies" ("policy" → "policies", "summary" → "summaries").
+//   - otherwise → "s".
+func Pluralize(snake string) string {
+	if snake == "" {
+		return snake
+	}
+	head, word := "", snake
+	if i := strings.LastIndexByte(snake, '_'); i >= 0 {
+		head, word = snake[:i+1], snake[i+1:]
+	}
+	return head + pluralizeWord(word)
+}
+
+// pluralizeWord pluralizes a single lowercase word.
+func pluralizeWord(w string) string {
+	switch {
+	case w == "":
+		return w
+	case strings.HasSuffix(w, "s"):
+		return w // already plural ("settings") or sibilant; avoid a double "s"
+	case strings.HasSuffix(w, "x"), strings.HasSuffix(w, "z"),
+		strings.HasSuffix(w, "ch"), strings.HasSuffix(w, "sh"):
+		return w + "es"
+	case strings.HasSuffix(w, "y") && len(w) >= 2 && !isVowel(w[len(w)-2]):
+		return w[:len(w)-1] + "ies"
+	default:
+		return w + "s"
+	}
+}
+
+// isVowel reports whether b is an ASCII vowel.
+func isVowel(b byte) bool {
+	switch b {
+	case 'a', 'e', 'i', 'o', 'u':
+		return true
+	}
+	return false
+}
 
 // GoPackage sanitizes a schema name into a valid idiomatic Go package name:
 // lowercase, no underscores. "bookstore_v1" → "bookstorev1".

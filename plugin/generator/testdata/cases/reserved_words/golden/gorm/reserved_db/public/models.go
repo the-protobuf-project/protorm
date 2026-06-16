@@ -16,7 +16,9 @@ type State string
 
 // State values as stored in the database.
 const (
+	// STATE_ACTIVE marks an open, usable account.
 	StateActive State = "ACTIVE"
+	// STATE_CLOSED marks a deactivated account.
 	StateClosed State = "CLOSED"
 )
 

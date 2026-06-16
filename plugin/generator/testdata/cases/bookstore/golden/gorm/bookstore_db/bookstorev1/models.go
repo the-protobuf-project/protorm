@@ -20,10 +20,14 @@ type Genre string
 
 // Genre values as stored in the database.
 const (
-	GenreFiction    Genre = "FICTION"
+	// Fictional works: novels, short stories.
+	GenreFiction Genre = "FICTION"
+	// Non-fiction works: biographies, essays, reference.
 	GenreNonFiction Genre = "NON_FICTION"
-	GenreSciFi      Genre = "SCI_FI"
-	GenreFantasy    Genre = "FANTASY"
+	// Science fiction works.
+	GenreSciFi Genre = "SCI_FI"
+	// Fantasy works.
+	GenreFantasy Genre = "FANTASY"
 )
 
 // Author is a top-level resource. Inferred table: bookstore_v1.authors. id: ID_STRATEGY_ULID synthesizes a generated `id` PK and demotes the AIP resource name to a UNIQUE lookup column; timestamps adds created_at/updated_at.

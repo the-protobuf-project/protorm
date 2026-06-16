@@ -23,8 +23,7 @@ type Event struct {
 	// Resource name; the AIP identifier.
 	Name string `gorm:"column:name;not null;uniqueIndex" json:"name" validate:"required"`
 	// Repeated attendee resource names.
-	Attendees  *string   `gorm:"column:attendees" json:"attendees,omitempty"`
-	Attendees2 *Attendee `gorm:"foreignKey:Attendees" json:"attendees2,omitempty"`
+	Attendees []string `gorm:"column:attendees" json:"attendees,omitempty"`
 	// Well-known type stays a scalar column, not a relation.
 	CreateTime time.Time `gorm:"column:create_time;not null;autoCreateTime" json:"create_time"`
 	// Map fields stay JSONB.
@@ -39,7 +38,7 @@ type Event struct {
 	MetadataID *string   `gorm:"column:metadata_id" json:"metadata_id,omitempty"`
 	Metadata   *Metadata `gorm:"foreignKey:MetadataID;constraint:OnDelete:SET NULL" json:"metadata,omitempty"`
 	// Back-relation: Attendee records that reference this via event_id.
-	Attendees3 []Attendee `gorm:"foreignKey:EventID" json:"attendees3,omitempty"`
+	Attendees2 []Attendee `gorm:"foreignKey:EventID" json:"attendees2,omitempty"`
 }
 
 func (*Event) TableName() string { return "embedded_v1.events" }
@@ -55,8 +54,6 @@ type Attendee struct {
 	// Parent reference to Event (from the AIP resource pattern).
 	EventID string `gorm:"column:event_id;not null" json:"event_id" validate:"required"`
 	Event   *Event `gorm:"foreignKey:EventID;constraint:OnDelete:CASCADE" json:"event,omitempty"`
-	// Back-relation: Event records that reference this via attendees.
-	Events []Event `gorm:"foreignKey:Attendees" json:"events,omitempty"`
 }
 
 func (*Attendee) TableName() string { return "embedded_v1.attendees" }

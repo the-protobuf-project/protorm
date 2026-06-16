@@ -21,7 +21,6 @@ erDiagram
     }
     Event {
         string id PK
-        string attendees FK
         string location_id FK
         string billing_id FK
         string metadata_id FK
@@ -33,7 +32,6 @@ erDiagram
         string id PK
     }
     Attendee }o--|| Event : "event_id"
-    Event }o--|| Attendee : "attendees"
     Event }o--|| Location : "location_id"
     Event }o--|| Location : "billing_id"
     Event }o--|| Metadata : "metadata_id"
@@ -54,7 +52,7 @@ Event exercises nested-message normalization: a singular message field becomes a
 | --- | --- | --- |
 | `id` | `CHAR(26)` | not null |
 | `name` | `VARCHAR(255)` | not null |
-| `attendees` | `CHAR(26)` | nullable |
+| `attendees` | `VARCHAR(255)[]` | nullable |
 | `create_time` | `TIMESTAMPTZ` | not null |
 | `labels` | `JSONB` | nullable |
 | `location_id` | `VARCHAR(255)` | not null |

@@ -18,10 +18,7 @@ model Event {
   name String @unique @map("name")
 
   /// Repeated attendee resource names.
-  attendees String? @map("attendees")
-
-  /// Relation to Attendee via attendees.
-  attendees2 Attendee? @relation("EventAttendees", fields: [attendees], references: [id])
+  attendees String[] @map("attendees")
 
   /// Well-known type stays a scalar column, not a relation.
   createTime DateTime @default(now()) @map("create_time")
@@ -48,10 +45,8 @@ model Event {
   metadata Metadata? @relation(fields: [metadataID], references: [id], onDelete: SetNull)
 
   /// Back-relation: Attendee records that reference this model via event_id.
-  attendees3 Attendee[] @relation("AttendeeEvent")
+  attendees2 Attendee[]
 
-  /// Composite index on [attendees].
-  @@index([attendees])
   /// Composite index on [location_id].
   @@index([locationID])
   /// Composite index on [billing_id].
@@ -79,10 +74,7 @@ model Attendee {
   eventID String @map("event_id")
 
   /// Relation to Event via event_id.
-  event Event @relation("AttendeeEvent", fields: [eventID], references: [id], onDelete: Cascade)
-
-  /// Back-relation: Event records that reference this model via attendees.
-  events Event[] @relation("EventAttendees")
+  event Event @relation(fields: [eventID], references: [id], onDelete: Cascade)
 
   /// Composite index on [event_id].
   @@index([eventID])

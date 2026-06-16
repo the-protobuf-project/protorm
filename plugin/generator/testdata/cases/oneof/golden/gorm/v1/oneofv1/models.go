@@ -16,8 +16,11 @@ type AudioInputCase string
 
 // AudioInputCase values as stored in the database.
 const (
-	AudioInputCaseAudioData            AudioInputCase = "AUDIO_DATA"
-	AudioInputCaseUploadPath           AudioInputCase = "UPLOAD_PATH"
+	// The audio_data member is set.
+	AudioInputCaseAudioData AudioInputCase = "AUDIO_DATA"
+	// The upload_path member is set.
+	AudioInputCaseUploadPath AudioInputCase = "UPLOAD_PATH"
+	// The live_pipeline_file_path member is set.
 	AudioInputCaseLivePipelineFilePath AudioInputCase = "LIVE_PIPELINE_FILE_PATH"
 )
 

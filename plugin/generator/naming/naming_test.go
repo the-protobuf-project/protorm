@@ -64,7 +64,19 @@ func TestSnakePlural(t *testing.T) {
 	cases := map[string]string{
 		"Book":       "books",
 		"BookAuthor": "book_authors",
-		// Known limitation: naive +s; irregular plurals need table name overrides.
+		// Consonant + "y" → "ies".
+		"CancellationPolicy": "cancellation_policies",
+		"MembershipSummary":  "membership_summaries",
+		// Already-plural words ending in "s" are left alone (no double "s").
+		"BufferSettings":  "buffer_settings",
+		"StayConstraints": "stay_constraints",
+		// Sibilant endings take "es".
+		"Box":  "boxes",
+		"Dish": "dishes",
+		// Vowel + "y" keeps the "y".
+		"Gateway": "gateways",
+		// Known limitation: "f" → "ves" is not handled; irregular plurals still
+		// need a table-name override.
 		"Shelf": "shelfs",
 	}
 	for in, want := range cases {
