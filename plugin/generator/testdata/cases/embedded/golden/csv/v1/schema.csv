@@ -16,6 +16,7 @@ v1,embedded_v1,locations,venue,VARCHAR(255),false,false,false,,Venue name within
 v1,embedded_v1,metadatas,id,CHAR(26),true,true,false,,Unique identifier for the record.
 v1,embedded_v1,metadatas,source,VARCHAR(255),false,false,false,,Free-form source system label.
 v1,embedded_v1,metadatas,tags,VARCHAR(255)[],false,false,false,,Arbitrary tags.
+v1,embedded_v1,metadatas,owner,CHAR(26),false,false,false,,"Singular resource reference → belongs-to with a bare-named FK column (`owner`, no `_id`). Its auto-index must name the scalar field `ownerID`, not the `owner` relation field, or Prisma rejects the @@index."
 v1,embedded_v1,event_attendees,id,CHAR(26),true,true,false,,Unique identifier for the record.
 v1,embedded_v1,event_attendees,event_id,CHAR(26),true,false,false,,Foreign key to Event.
 v1,embedded_v1,event_attendees,attendee_id,CHAR(26),true,false,false,,Foreign key to Attendee.

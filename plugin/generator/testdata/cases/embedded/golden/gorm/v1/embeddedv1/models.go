@@ -54,6 +54,8 @@ type Attendee struct {
 	// Parent reference to Event (from the AIP resource pattern).
 	EventID string `gorm:"column:event_id;not null" json:"event_id" validate:"required"`
 	Event   *Event `gorm:"foreignKey:EventID;constraint:OnDelete:CASCADE" json:"event,omitempty"`
+	// Back-relation: Metadata records that reference this via owner.
+	Metadatas []Metadata `gorm:"foreignKey:Owner" json:"metadatas,omitempty"`
 	// Back-relation: EventAttendees records that reference this via attendee_id.
 	EventAttendees []EventAttendees `gorm:"foreignKey:AttendeeID" json:"eventattendees,omitempty"`
 }
@@ -84,6 +86,9 @@ type Metadata struct {
 	Source *string `gorm:"column:source" json:"source,omitempty"`
 	// Arbitrary tags.
 	Tags []string `gorm:"column:tags" json:"tags,omitempty"`
+	// Singular resource reference → belongs-to with a bare-named FK column (`owner`, no `_id`). Its auto-index must name the scalar field `ownerID`, not the `owner` relation field, or Prisma rejects the @@index.
+	OwnerID *string   `gorm:"column:owner" json:"owner,omitempty"`
+	Owner   *Attendee `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
 	// Back-relation: Event records that reference this via metadata_id.
 	Events []Event `gorm:"foreignKey:MetadataID" json:"events,omitempty"`
 }

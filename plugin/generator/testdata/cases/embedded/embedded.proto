@@ -55,6 +55,10 @@ message Metadata {
   string source = 1;
   // Arbitrary tags.
   repeated string tags = 2;
+  // Singular resource reference → belongs-to with a bare-named FK column
+  // (`owner`, no `_id`). Its auto-index must name the scalar field `ownerID`,
+  // not the `owner` relation field, or Prisma rejects the @@index.
+  string owner = 3 [(google.api.resource_reference) = {type: "embedded.v1/Attendee"}];
 }
 
 // Location is reachable from Event and so becomes its own table; its existing

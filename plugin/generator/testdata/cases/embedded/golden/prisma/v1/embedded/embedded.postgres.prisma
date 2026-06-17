@@ -76,6 +76,9 @@ model Attendee {
   /// Relation to Event via event_id.
   event Event @relation(fields: [eventID], references: [id], onDelete: Cascade)
 
+  /// Back-relation: Metadata records that reference this model via owner.
+  metadatas Metadata[]
+
   /// Back-relation: EventAttendees records that reference this model via attendee_id.
   eventAttendees EventAttendees[]
 
@@ -121,9 +124,17 @@ model Metadata {
   /// Arbitrary tags.
   tags String[] @map("tags")
 
+  /// Singular resource reference → belongs-to with a bare-named FK column (`owner`, no `_id`). Its auto-index must name the scalar field `ownerID`, not the `owner` relation field, or Prisma rejects the @@index.
+  ownerID String? @map("owner")
+
+  /// Relation to Attendee via owner.
+  owner Attendee? @relation(fields: [ownerID], references: [id])
+
   /// Back-relation: Event records that reference this model via metadata_id.
   events Event[]
 
+  /// Composite index on [owner].
+  @@index([ownerID])
   /// Maps the model to the "metadatas" table in the database.
   @@map("metadatas")
   /// Maps the model to the "embedded_v1" schema in the database.

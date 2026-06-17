@@ -33,6 +33,7 @@ erDiagram
     }
     Metadata {
         string id PK
+        string owner FK
     }
     Attendee }o--|| Event : "event_id"
     Event }o--|| Location : "location_id"
@@ -40,6 +41,7 @@ erDiagram
     Event }o--|| Metadata : "metadata_id"
     EventAttendees }o--|| Event : "event_id"
     EventAttendees }o--|| Attendee : "attendee_id"
+    Metadata }o--|| Attendee : "owner"
 ```
 
 Schema file: [`embedded.postgres.prisma`](./embedded.postgres.prisma)
@@ -88,6 +90,7 @@ Metadata is reachable only through Event.metadata and carries no resource annota
 | `id` | `CHAR(26)` | not null |
 | `source` | `VARCHAR(255)` | nullable |
 | `tags` | `VARCHAR(255)[]` | nullable |
+| `owner` | `CHAR(26)` | nullable |
 
 ### `EventAttendees` → `event_attendees`
 

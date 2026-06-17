@@ -84,9 +84,12 @@ func modelViewOf(t *schema.Table, provider types.Provider) modelView {
 	m := modelView{Comment: commentOr(t.Comment, t.ModelName+" model."), Name: t.ModelName, Map: t.Name, Schema: t.PgSchema}
 
 	// Reserve every scalar field name so a relation field can't collide with one.
+	// colByName lets index emission resolve a DB column to its scalar field name.
 	used := map[string]bool{}
+	colByName := map[string]*schema.Column{}
 	for _, col := range t.Columns {
 		used[scalarFieldName(col)] = true
+		colByName[col.Name] = col
 	}
 
 	for _, col := range t.Columns {
@@ -135,9 +138,17 @@ func modelViewOf(t *schema.Table, provider types.Provider) modelView {
 	}
 
 	for _, idx := range t.Indexes {
+		// Prisma's @@index/@@unique must name the Prisma *scalar field*, not the DB
+		// column. For FK columns those differ (column "resource" → field
+		// "resourceID"), and the bare camel name would collide with the relation
+		// field — so resolve through scalarFieldName when the column is known.
 		cols := make([]string, len(idx.Columns))
 		for i, c := range idx.Columns {
-			cols[i] = naming.Camel(c)
+			if col, ok := colByName[c]; ok {
+				cols[i] = scalarFieldName(col)
+			} else {
+				cols[i] = naming.Camel(c)
+			}
 		}
 		directive, label := "@@index", "Composite index"
 		if idx.Unique {

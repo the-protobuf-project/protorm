@@ -33,6 +33,7 @@ erDiagram
     }
     Metadata {
         string id PK
+        string owner FK
     }
     Attendee }o--|| Event : "event_id"
     Event }o--|| Location : "location_id"
@@ -40,6 +41,7 @@ erDiagram
     Event }o--|| Metadata : "metadata_id"
     EventAttendees }o--|| Event : "event_id"
     EventAttendees }o--|| Attendee : "attendee_id"
+    Metadata }o--|| Attendee : "owner"
 ```
 
 ## Subfolders
