@@ -85,5 +85,33 @@ CREATE TABLE "embedded_v1"."event_attendees" (
     CONSTRAINT "fk_event_attendees_attendee_id" FOREIGN KEY ("attendee_id") REFERENCES "embedded_v1"."attendees"("id") ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX "idx_event_attendees_event_id_attendee_id" ON "embedded_v1"."event_attendees" ("event_id", "attendee_id");
-CREATE INDEX "idx_event_attendees_event_id" ON "embedded_v1"."event_attendees" ("event_id");
 CREATE INDEX "idx_event_attendees_attendee_id" ON "embedded_v1"."event_attendees" ("attendee_id");
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "embedded_v1"."events" IS 'Event exercises nested-message normalization: a singular message field becomes a belongs-to relation, a repeated message field becomes a has-many, while well-known and map fields stay scalar / JSONB.';
+COMMENT ON COLUMN "embedded_v1"."events"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "embedded_v1"."events"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "embedded_v1"."events"."create_time" IS 'Well-known type stays a scalar column, not a relation.';
+COMMENT ON COLUMN "embedded_v1"."events"."labels" IS 'Map fields stay JSONB.';
+COMMENT ON COLUMN "embedded_v1"."events"."location_id" IS 'Foreign key to Location.';
+COMMENT ON COLUMN "embedded_v1"."events"."billing_id" IS 'Foreign key to Location.';
+COMMENT ON COLUMN "embedded_v1"."events"."metadata_id" IS 'Foreign key to Metadata.';
+COMMENT ON TABLE "embedded_v1"."attendees" IS 'Attendee carries an IDENTIFIER, so that field is its primary key.';
+COMMENT ON COLUMN "embedded_v1"."attendees"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "embedded_v1"."attendees"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "embedded_v1"."attendees"."email" IS 'Email address of the attendee.';
+COMMENT ON COLUMN "embedded_v1"."attendees"."event_id" IS 'Parent reference to Event (from the AIP resource pattern).';
+COMMENT ON TABLE "embedded_v1"."locations" IS 'Location is reachable from Event and so becomes its own table; its existing `id` field is promoted to the primary key.';
+COMMENT ON COLUMN "embedded_v1"."locations"."id" IS 'Unique identifier for the location, assigned by the server.';
+COMMENT ON COLUMN "embedded_v1"."locations"."city" IS 'City where the location resides.';
+COMMENT ON COLUMN "embedded_v1"."locations"."venue" IS 'Venue name within the city.';
+COMMENT ON TABLE "embedded_v1"."metadatas" IS 'Metadata is reachable only through Event.metadata and carries no resource annotation, yet it still becomes its own table (with a synthesized primary key) rather than an inlined JSONB blob.';
+COMMENT ON COLUMN "embedded_v1"."metadatas"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "embedded_v1"."metadatas"."source" IS 'Free-form source system label.';
+COMMENT ON COLUMN "embedded_v1"."metadatas"."tags" IS 'Arbitrary tags.';
+COMMENT ON COLUMN "embedded_v1"."metadatas"."owner" IS 'Singular resource reference → belongs-to with a bare-named FK column (`owner`, no `_id`). Its auto-index must name the scalar field `ownerID`, not the `owner` relation field, or Prisma rejects the @@index.';
+COMMENT ON TABLE "embedded_v1"."event_attendees" IS 'Join table for the many-to-many relation Event.attendees ↔ Attendee.';
+COMMENT ON COLUMN "embedded_v1"."event_attendees"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "embedded_v1"."event_attendees"."event_id" IS 'Foreign key to Event.';
+COMMENT ON COLUMN "embedded_v1"."event_attendees"."attendee_id" IS 'Foreign key to Attendee.';

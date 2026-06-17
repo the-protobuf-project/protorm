@@ -37,7 +37,10 @@ func goType(col *schema.Column) string {
 }
 
 // structTag builds the combined gorm + json + validate struct tag for a column.
-func structTag(col *schema.Column) string {
+// idxFrags are the table-level index fragments (composite and synthesized FK
+// indexes) this column participates in, so GORM AutoMigrate creates the same
+// indexes the SQL target emits.
+func structTag(col *schema.Column, idxFrags []string) string {
 	gormParts := []string{"column:" + col.Name}
 	if col.PrimaryKey {
 		gormParts = append(gormParts, "primaryKey")
@@ -63,6 +66,7 @@ func structTag(col *schema.Column) string {
 	if col.Index {
 		gormParts = append(gormParts, "index")
 	}
+	gormParts = append(gormParts, idxFrags...)
 	tag := `gorm:"` + strings.Join(gormParts, ";") + `"`
 
 	if col.Optional {
@@ -77,6 +81,31 @@ func structTag(col *schema.Column) string {
 		tag += ` validate:"required"`
 	}
 	return tag
+}
+
+// indexTagsByColumn maps each column to the GORM index struct-tag fragments for
+// the table-level indexes it participates in (composite indexes from
+// protorm.v1.table.indexes and the synthesized single-column FK indexes). A
+// multi-column index carries a per-column priority so GORM preserves column
+// order; a single-column index needs none. The index name matches the SQL
+// target's (assigned in the build's nameIndexes pass), so both backends create
+// the same physical index.
+func indexTagsByColumn(t *schema.Table) map[string][]string {
+	out := map[string][]string{}
+	for _, idx := range t.Indexes {
+		kind := "index"
+		if idx.Unique {
+			kind = "uniqueIndex"
+		}
+		for pos, col := range idx.Columns {
+			frag := kind + ":" + idx.Name
+			if len(idx.Columns) > 1 {
+				frag += ",priority:" + strconv.Itoa(pos+1)
+			}
+			out[col] = append(out[col], frag)
+		}
+	}
+	return out
 }
 
 // constraintTag renders the GORM constraint fragment for the FK on column

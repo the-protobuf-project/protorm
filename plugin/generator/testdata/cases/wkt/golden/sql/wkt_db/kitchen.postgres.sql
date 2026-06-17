@@ -46,3 +46,23 @@ CREATE TABLE "kitchen"."sinks" (
     -- map → JSONB.
     "attributes"  JSONB
 );
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "kitchen"."sinks" IS 'Sink is one table holding every interesting type mapping.';
+COMMENT ON COLUMN "kitchen"."sinks"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "kitchen"."sinks"."name" IS 'name: IDENTIFIER → PRIMARY KEY.';
+COMMENT ON COLUMN "kitchen"."sinks"."flag" IS 'bool → BOOLEAN.';
+COMMENT ON COLUMN "kitchen"."sinks"."count32" IS 'int32 → INTEGER.';
+COMMENT ON COLUMN "kitchen"."sinks"."count64" IS 'int64 → BIGINT.';
+COMMENT ON COLUMN "kitchen"."sinks"."ratio" IS 'float → REAL.';
+COMMENT ON COLUMN "kitchen"."sinks"."precise" IS 'double → DOUBLE PRECISION.';
+COMMENT ON COLUMN "kitchen"."sinks"."blob" IS 'bytes → BYTEA.';
+COMMENT ON COLUMN "kitchen"."sinks"."event_time" IS 'Timestamp → TIMESTAMPTZ.';
+COMMENT ON COLUMN "kitchen"."sinks"."window" IS 'Duration → INTERVAL.';
+COMMENT ON COLUMN "kitchen"."sinks"."mask" IS 'FieldMask → TEXT.';
+COMMENT ON COLUMN "kitchen"."sinks"."maybe_count" IS 'Int64 wrapper → BIGINT.';
+COMMENT ON COLUMN "kitchen"."sinks"."maybe_label" IS 'String wrapper → VARCHAR(255).';
+COMMENT ON COLUMN "kitchen"."sinks"."tags" IS 'repeated string → VARCHAR(255)[].';
+COMMENT ON COLUMN "kitchen"."sinks"."scores" IS 'repeated int32 → INTEGER[].';
+COMMENT ON COLUMN "kitchen"."sinks"."attributes" IS 'map → JSONB.';

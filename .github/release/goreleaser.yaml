@@ -79,7 +79,7 @@ homebrew_casks:
       token: '{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}'
     directory: Casks
     homepage: 'https://github.com/the-protobuf-project/protorm'
-    description: 'Protoc plugin generating Prisma, GORM, SQL & CSV schemas from Protobuf + AIP annotations'
+    description: 'Protoc plugin generating Prisma, GORM & SQL schemas from Protobuf + AIP annotations'
     ids:
       - protoc-gen-protorm-archive
     binaries:
@@ -103,7 +103,7 @@ release:
   header: |
     ## What's New in v{{.Version}}
 
-    `protoc-gen-protorm` generates Prisma, GORM, SQL, and CSV database schemas
+    `protoc-gen-protorm` generates Prisma, GORM, and SQL database schemas
     from your Protobuf definitions. Download the binary for your platform below.
 
     ### Installation
@@ -126,5 +126,5 @@ release:
     plugins:
       - local: protoc-gen-protorm
         out: generated
-        opt: [target=prisma]   # prisma | gorm | sql | csv
+        opt: [target=prisma]   # prisma | gorm | sql
     ```

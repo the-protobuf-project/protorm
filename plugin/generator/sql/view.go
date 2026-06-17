@@ -47,8 +47,43 @@ type tableView struct {
 	Indexes      []string
 }
 
+// schemaDDL holds the per-schema statement groups shared by the per-schema file
+// and the consolidated migrate.sql: trigger functions, triggers, and COMMENT ON.
+type schemaDDL struct {
+	Functions []string // CREATE OR REPLACE FUNCTION for auto-update columns
+	Triggers  []string // CREATE TRIGGER firing those functions on UPDATE
+	Comments  []string // COMMENT ON TABLE / COLUMN for documented objects
+}
+
 // schemaView assembles the template data for one schema's DDL file.
 func schemaView(db *schema.Database, s *schema.Schema) map[string]any {
+	enums := enumDDLViews(s)
+
+	var tables []tableView
+	for _, t := range s.Tables {
+		tables = append(tables, tableViewOf(s, t))
+	}
+
+	ddl := schemaDDLOf(s)
+	return map[string]any{
+		"Header": header.Render("--", header.Info{
+			PluginVersion: db.PluginVersion,
+			ProtocVersion: db.ProtocVersion,
+			Source:        strings.Join(s.SourceProtos(), ", "),
+			Database:      db.Name,
+			Schema:        s.Name,
+		}),
+		"SchemaQ":   quoteIdent(s.Name),
+		"Enums":     enums,
+		"Tables":    tables,
+		"Functions": ddl.Functions,
+		"Triggers":  ddl.Triggers,
+		"Comments":  ddl.Comments,
+	}
+}
+
+// enumDDLViews builds the CREATE TYPE view list for a schema's enums.
+func enumDDLViews(s *schema.Schema) []enumDDLView {
 	var enums []enumDDLView
 	for _, e := range s.Enums {
 		vals := make([]string, len(e.Values))
@@ -60,31 +95,141 @@ func schemaView(db *schema.Database, s *schema.Schema) map[string]any {
 			comment = e.LocalName + " enum values."
 		}
 		enums = append(enums, enumDDLView{
-			Comment: comment,
-			// Schema-qualified type, so the bare enum name suffices — the schema
-			// already namespaces it (CREATE TYPE "calendar_app"."state", not "…_state").
+			Comment:   comment,
 			TypeRef:   qualified(s.Name, e.LocalSQLName),
 			ValueList: strings.Join(vals, ", "),
 		})
 	}
+	return enums
+}
 
-	var tables []tableView
+// schemaDDLOf builds the trigger functions, triggers, and COMMENT ON statements
+// for one schema. A function is emitted once per distinct auto-update column
+// name (set_updated_at, set_update_time, …) and qualified to the schema so it
+// never collides across schemas; each owning table gets a BEFORE UPDATE trigger
+// that fires it. COMMENT ON persists every table/column comment into the catalog
+// (the inline -- comments in the DDL file are not stored by PostgreSQL).
+func schemaDDLOf(s *schema.Schema) schemaDDL {
+	var ddl schemaDDL
+	funcSeen := map[string]bool{}
 	for _, t := range s.Tables {
-		tables = append(tables, tableViewOf(s, t))
+		for _, c := range t.Columns {
+			if c.AutoUpdate {
+				if !funcSeen[c.Name] {
+					funcSeen[c.Name] = true
+					ddl.Functions = append(ddl.Functions, updatedAtFunction(s.Name, c.Name))
+				}
+				ddl.Triggers = append(ddl.Triggers, updatedAtTrigger(s.Name, t.Name, c.Name))
+			}
+		}
+		ddl.Comments = append(ddl.Comments, tableComments(s.Name, t)...)
+	}
+	return ddl
+}
+
+// updatedAtFunction renders the trigger function that stamps now() onto an
+// auto-update column on every UPDATE.
+func updatedAtFunction(schemaName, col string) string {
+	return fmt.Sprintf(
+		"CREATE OR REPLACE FUNCTION %s() RETURNS trigger AS $$\nBEGIN\n    NEW.%s = now();\n    RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;",
+		qualified(schemaName, "set_"+col), quoteIdent(col))
+}
+
+// updatedAtTrigger renders the BEFORE UPDATE trigger wiring a table to its
+// auto-update function.
+func updatedAtTrigger(schemaName, table, col string) string {
+	return fmt.Sprintf(
+		"CREATE TRIGGER %s BEFORE UPDATE ON %s\n    FOR EACH ROW EXECUTE FUNCTION %s();",
+		quoteIdent("trg_"+table+"_"+col), qualified(schemaName, table), qualified(schemaName, "set_"+col))
+}
+
+// tableComments renders COMMENT ON statements for a table and its commented columns.
+func tableComments(schemaName string, t *schema.Table) []string {
+	var out []string
+	ref := qualified(schemaName, t.Name)
+	if t.Comment != "" {
+		out = append(out, "COMMENT ON TABLE "+ref+" IS "+quoteLiteral(t.Comment)+";")
+	}
+	for _, c := range t.Columns {
+		if c.Comment != "" {
+			out = append(out, "COMMENT ON COLUMN "+ref+"."+quoteIdent(c.Name)+" IS "+quoteLiteral(c.Comment)+";")
+		}
+	}
+	return out
+}
+
+// migrateTableView is one table in the consolidated migrate.sql: columns only,
+// with foreign keys deferred to ALTER statements (migrateView.Alters) so table
+// creation order never matters, even across schemas or reference cycles.
+type migrateTableView struct {
+	Comment, Ref string
+	Cols         []itemView
+}
+
+// migrateView assembles the single-file migration covering every schema in db.
+// Statements are grouped so the file applies in one shot regardless of
+// dependency order: all schemas, then enums, then tables (no inline FKs), then
+// FK constraints as ALTER TABLE, then indexes, trigger functions, triggers, and
+// COMMENT ON. The whole file is wrapped in a transaction by the template.
+func migrateView(db *schema.Database) map[string]any {
+	var schemaNames []string
+	var enums []enumDDLView
+	var tables []migrateTableView
+	var alters, indexes, functions, triggers, comments []string
+
+	for _, s := range db.Schemas {
+		schemaNames = append(schemaNames, quoteIdent(s.Name))
+		enums = append(enums, enumDDLViews(s)...)
+
+		for _, t := range s.Tables {
+			mt := migrateTableView{Comment: t.Comment, Ref: qualified(s.Name, t.Name)}
+			for _, col := range t.Columns {
+				mt.Cols = append(mt.Cols, itemView{Comment: col.Comment, Def: colDef(s, col)})
+			}
+			if n := len(mt.Cols); n > 0 {
+				mt.Cols[n-1].Last = true
+			}
+			tables = append(tables, mt)
+
+			for _, fk := range t.ForeignKeys {
+				alters = append(alters, "ALTER TABLE "+qualified(s.Name, t.Name)+" ADD "+fkDef(t.Name, fk)+";")
+			}
+			indexes = append(indexes, indexStmts(s, t)...)
+		}
+
+		ddl := schemaDDLOf(s)
+		functions = append(functions, ddl.Functions...)
+		triggers = append(triggers, ddl.Triggers...)
+		comments = append(comments, ddl.Comments...)
 	}
 
 	return map[string]any{
 		"Header": header.Render("--", header.Info{
 			PluginVersion: db.PluginVersion,
 			ProtocVersion: db.ProtocVersion,
-			Source:        strings.Join(s.SourceProtos(), ", "),
 			Database:      db.Name,
-			Schema:        s.Name,
+			SchemaLabel:   "schemas",
+			Schema:        strings.Join(schemaLabels(db), ", "),
+			Notes:         []string{"Single-file migration: every schema, applied in one transaction."},
 		}),
-		"SchemaQ": quoteIdent(s.Name),
-		"Enums":   enums,
-		"Tables":  tables,
+		"Schemas":   schemaNames,
+		"Enums":     enums,
+		"Tables":    tables,
+		"Alters":    alters,
+		"Indexes":   indexes,
+		"Functions": functions,
+		"Triggers":  triggers,
+		"Comments":  comments,
 	}
+}
+
+// schemaLabels returns the bare schema names for the migrate.sql banner.
+func schemaLabels(db *schema.Database) []string {
+	out := make([]string, 0, len(db.Schemas))
+	for _, s := range db.Schemas {
+		out = append(out, s.Name)
+	}
+	return out
 }
 
 // tableViewOf renders one table's column defs, FK constraints, and indexes.
@@ -101,11 +246,16 @@ func tableViewOf(s *schema.Schema, t *schema.Table) tableView {
 		tv.Items[n-1].Last = true
 	}
 
+	tv.Indexes = indexStmts(s, t)
+	return tv
+}
+
+// indexStmts renders the CREATE INDEX statements for a table. Names come from the
+// build's nameIndexes pass, so the consolidated migrate.sql and per-schema files
+// reference identical index identifiers.
+func indexStmts(s *schema.Schema, t *schema.Table) []string {
+	var out []string
 	for _, idx := range t.Indexes {
-		name := idx.Name
-		if name == "" {
-			name = "idx_" + t.Name + "_" + strings.Join(idx.Columns, "_")
-		}
 		cols := make([]string, len(idx.Columns))
 		for i, c := range idx.Columns {
 			cols[i] = quoteIdent(c)
@@ -114,12 +264,12 @@ func tableViewOf(s *schema.Schema, t *schema.Table) tableView {
 		if idx.Unique {
 			unique = "UNIQUE "
 		}
-		tv.Indexes = append(tv.Indexes, fmt.Sprintf(
+		out = append(out, fmt.Sprintf(
 			"CREATE %sINDEX %s ON %s (%s);",
-			unique, quoteIdent(name), qualified(s.Name, t.Name), strings.Join(cols, ", "),
+			unique, quoteIdent(idx.Name), qualified(s.Name, t.Name), strings.Join(cols, ", "),
 		))
 	}
-	return tv
+	return out
 }
 
 // colDef renders a single column definition fragment.

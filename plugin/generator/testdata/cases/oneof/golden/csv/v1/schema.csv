@@ -1,8 +1,0 @@
-database,schema,table,column,sql_type,not_null,primary_key,unique,default,description
-v1,oneof_v1,audios,id,CHAR(26),true,true,false,,Unique identifier for the record.
-v1,oneof_v1,audios,name,VARCHAR(255),true,false,true,,Resource name; the AIP identifier.
-v1,oneof_v1,audios,audio_data,BYTEA,false,false,false,,Inline audio bytes.
-v1,oneof_v1,audios,upload_path,VARCHAR(255),false,false,false,,Path to a previously uploaded file.
-v1,oneof_v1,audios,live_pipeline_file_path,VARCHAR(255),false,false,false,,Path to a file produced by a live pipeline.
-v1,oneof_v1,audios,sample_rate,INTEGER,false,false,false,,sample_rate is a plain scalar outside the oneof.
-v1,oneof_v1,audios,input_case,enum:audio_input_case,false,false,false,,Discriminator: which input oneof member is set (null = none).

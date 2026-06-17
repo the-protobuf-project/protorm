@@ -8,14 +8,13 @@ service definitions into production-grade database schemas. Annotate your
 messages with the [Google AIP](https://google.aip.dev/) standards you already
 use (`google.api.resource`, `field_behavior`, `resource_reference`) and protorm
 infers tables, columns, primary keys, foreign keys, and relations — then emits
-them for four backends from one source of truth.
+them for three backends from one source of truth.
 
 | Target | Output | Notes |
 | --- | --- | --- |
 | **prisma** | A complete, runnable Prisma 7 project | multi-file schema, `package.json`, `tsconfig.json`, config, `.env.example` |
-| **gorm** | Go structs with GORM tags | one package per schema, pointer types for nullables, relation fields |
-| **sql** | PostgreSQL DDL | `CREATE SCHEMA/TYPE/TABLE`, FK constraints, indexes |
-| **csv** | Flat schema manifest | one row per column — feed to doc tooling or document stores |
+| **gorm** | Go structs with GORM tags + a migration registry | one package per schema, pointer types for nullables, relation fields, a `migrate.go` factory `Registry` |
+| **sql** | PostgreSQL DDL | per-schema files **and** a single transactional `migrate.sql`; FK constraints, indexes, `updated_at` triggers, `COMMENT ON` |
 
 Every target also emits a `README.md` with a Mermaid ER diagram and a per-model
 column reference, so the generated tree is self-documenting regardless of backend.
@@ -38,7 +37,7 @@ remaining 20% (anything AIP can't express) from `protorm.v1.*` options.
 | proto scalar / well-known type | the column's SQL type (see [Type mapping](#type-mapping)) |
 
 Everything is built into one intermediate representation, then each target
-renders it independently — so all four outputs always agree.
+renders it independently — so all three outputs always agree.
 
 ---
 
@@ -111,7 +110,7 @@ version: v2
 plugins:
   - local: protoc-gen-protorm
     out: generated/prisma
-    opt: [target=prisma]   # prisma | gorm | sql | csv
+    opt: [target=prisma]   # prisma | gorm | sql
 ```
 
 **3. Generate.**
@@ -181,11 +180,11 @@ generated/prisma/bookstore_db/
 └── inventory/inventory.postgres.prisma    # (a second file, merged datasource)
 
 generated/gorm/bookstore_db/bookstorev1/models.go   # package = folder name
+generated/gorm/bookstore_db/migrate.go              # factory Registry (needs go_module)
 generated/gorm/bookstore_db/README.md               # ER diagram + model reference
+generated/sql/bookstore_db/migrate.sql              # whole DB, one transactional file
 generated/sql/bookstore_db/bookstore_v1.postgres.sql
 generated/sql/bookstore_db/README.md
-generated/csv/bookstore_db/schema.csv
-generated/csv/bookstore_db/README.md
 ```
 
 The Prisma output is a project you can run immediately:
@@ -195,6 +194,28 @@ cd generated/prisma/bookstore_db
 npm install
 cp .env.example .env        # then set BOOKSTORE_DB_DATABASE_URL
 npm run prisma:generate
+```
+
+The **gorm** target emits a `migrate.go` factory registry (when you pass the
+`go_module` opt, see [Plugin options](#plugin-options-opt-in-bufgenyaml)). Attach
+it in your application — one call migrates every model across every schema, and
+you can register your own models alongside the generated ones:
+
+```go
+import bookstoredb "github.com/me/gen/bookstore_db"
+
+if err := bookstoredb.Default.Migrate(db); err != nil { // db is your *gorm.DB
+    log.Fatal(err)
+}
+bookstoredb.Default.Register(&MyModel{})  // add your own to the same registry
+```
+
+The **sql** target emits one transactional `migrate.sql` you can apply in a
+single shot (foreign keys are deferred to `ALTER` statements, so creation order
+never matters), in addition to the per-schema files:
+
+```bash
+psql "$BOOKSTORE_DB_DATABASE_URL" -f generated/sql/bookstore_db/migrate.sql
 ```
 
 ---
@@ -239,7 +260,8 @@ All options live in `protorm/v1/annotations.proto`.
 
 | Option | Description |
 | --- | --- |
-| `target` | Output backend: `prisma` \| `gorm` \| `sql` \| `csv`. Required. |
+| `target` | Output backend: `prisma` \| `gorm` \| `sql`. Required. |
+| `go_module` | **gorm only.** Go import path of the output directory (e.g. `github.com/me/gen`). Enables the `migrate.go` factory registry, whose package imports each per-schema models package. Omit it and the per-schema model packages still generate, just without the aggregator. |
 | `strict` | Per-rule severity for schema problems. `""` (default) warns on everything; `true` makes every rule a hard error; a spec like `ref:error,collision:warn,index:error,lint:warn` sets severity per rule. Rules: **ref** (unresolved/dropped references), **collision** (global name qualification), **index** (index names an unknown column), **lint** (validate-on-generate advisories). |
 | `config` | Path to a [`protorm.yaml`](#layout-config-protormyaml) layout config. |
 
@@ -301,7 +323,7 @@ migrate diff` is a no-op when nothing changed. When two schemas in one database
 share a model or enum name, only **Prisma** qualifies the colliding names (its
 models occupy one global namespace) — and it qualifies **all** participants, so
 adding a new package cannot silently rename an existing model and force a
-destructive migration. The schema-namespaced targets (SQL, GORM, CSV) keep the
+destructive migration. The schema-namespaced targets (SQL, GORM) keep the
 bare name, since the schema or Go package already disambiguates it. Recommended
 flow: regenerate, review the diff, then `migrate diff` / `migrate dev`.
 

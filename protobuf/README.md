@@ -9,7 +9,7 @@ indexes, id strategy, referential actions, …).
 
 This module ships **only the option definitions**. Code generation is done by the
 `protoc-gen-protorm` plugin — see the [main repo](https://github.com/the-protobuf-project/protorm)
-for installing the plugin and generating Prisma / GORM / SQL / CSV output.
+for installing the plugin and generating Prisma / GORM / SQL output.
 
 ---
 

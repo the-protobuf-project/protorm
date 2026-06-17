@@ -31,3 +31,14 @@ CREATE TABLE "oneof_v1"."audios" (
     -- Discriminator: which input oneof member is set (null = none).
     "input_case"  "oneof_v1"."audio_input_case"
 );
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "oneof_v1"."audios" IS 'Audio exercises oneof integrity: the `input` oneof flattens to independent nullable columns, and protorm adds a generated input_case discriminator enum recording which member is set so the lost exclusivity invariant is observable.';
+COMMENT ON COLUMN "oneof_v1"."audios"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "oneof_v1"."audios"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "oneof_v1"."audios"."audio_data" IS 'Inline audio bytes.';
+COMMENT ON COLUMN "oneof_v1"."audios"."upload_path" IS 'Path to a previously uploaded file.';
+COMMENT ON COLUMN "oneof_v1"."audios"."live_pipeline_file_path" IS 'Path to a file produced by a live pipeline.';
+COMMENT ON COLUMN "oneof_v1"."audios"."sample_rate" IS 'sample_rate is a plain scalar outside the oneof.';
+COMMENT ON COLUMN "oneof_v1"."audios"."input_case" IS 'Discriminator: which input oneof member is set (null = none).';

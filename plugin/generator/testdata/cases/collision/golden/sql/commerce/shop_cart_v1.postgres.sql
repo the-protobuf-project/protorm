@@ -25,3 +25,11 @@ CREATE TABLE "shop_cart_v1"."moneys" (
     -- Status is a cart-side enum whose simple name collides with order.Status.
     "status"  "shop_cart_v1"."status"  NOT NULL  DEFAULT 'PENDING'
 );
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "shop_cart_v1"."moneys" IS 'Money is a cart-side resource. Its simple name "Money" collides with the order-side Money once both packages merge into the "commerce" database (see protorm.yaml). Prisma qualifies the colliding model names (its models share one global namespace), while the schema-namespaced targets — GORM (one package per schema), SQL, and CSV — keep the bare "Money", since the schema already disambiguates them.';
+COMMENT ON COLUMN "shop_cart_v1"."moneys"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "shop_cart_v1"."moneys"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "shop_cart_v1"."moneys"."amount" IS 'Amount in minor units.';
+COMMENT ON COLUMN "shop_cart_v1"."moneys"."status" IS 'Status is a cart-side enum whose simple name collides with order.Status.';

@@ -28,3 +28,12 @@ CREATE TABLE "public"."user" (
     "state"  "public"."state"
 );
 CREATE UNIQUE INDEX "idx_user_order_select" ON "public"."user" ("order", "select");
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "public"."user" IS 'Account is forced onto the reserved table name "user" via a table override, with reserved-word columns and a composite UNIQUE index over them.';
+COMMENT ON COLUMN "public"."user"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "public"."user"."name" IS 'name: IDENTIFIER → PRIMARY KEY.';
+COMMENT ON COLUMN "public"."user"."order" IS 'order is a reserved word; also carries a single-column index.';
+COMMENT ON COLUMN "public"."user"."select" IS 'select is a reserved word.';
+COMMENT ON COLUMN "public"."user"."state" IS 'state exercises a quoted, schema-qualified enum type reference.';

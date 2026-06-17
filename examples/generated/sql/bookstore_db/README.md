@@ -30,8 +30,9 @@ erDiagram
 
 ## Output
 
-- `<schema>.postgres.sql` — one DDL file per schema.
-- Apply referenced tables before referencing ones, or wrap all files in a single transaction.
+- `migrate.sql` — the whole database in one transactional file; apply with `psql -f migrate.sql`.
+- `<schema>.postgres.sql` — one DDL file per schema (apply referenced tables before referencing ones).
+- Auto-update triggers keep updated-at columns current; COMMENT ON persists field docs to the catalog.
 
 ## Schema `bookstore_v1`
 

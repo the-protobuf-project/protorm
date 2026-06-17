@@ -21,7 +21,7 @@ type Table struct {
 
 	// LocalName is the bare, schema-local model name (the proto message simple
 	// name), never qualified for global uniqueness. Schema-namespaced targets
-	// (GORM, SQL, CSV) render this so a name that the @@schema / Go package
+	// (GORM, SQL) render this so a name that the @@schema / Go package
 	// already disambiguates isn't redundantly prefixed (a "Location" shared by two
 	// schemas stays "Location", not "CalendarLocation"). Prisma uses ModelName.
 	LocalName string

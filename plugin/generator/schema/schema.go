@@ -15,11 +15,11 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 )
 
-// Target is implemented by every output backend (prisma, gorm, sql, csv).
+// Target is implemented by every output backend (prisma, gorm, sql).
 // It receives the fully-built IR and writes output via protogen.Plugin.
 type Target interface {
 	// Name returns the short identifier matched against the "target" plugin opt.
-	// Example: "prisma", "gorm", "sql", "csv".
+	// Example: "prisma", "gorm", "sql".
 	Name() string
 
 	// Generate writes one or more output files for every database in dbs.
@@ -40,6 +40,12 @@ type Database struct {
 	// value renders as "(unknown)".
 	PluginVersion string
 	ProtocVersion string
+
+	// GoModule is the Go import path of the directory the generated tree is
+	// written into ("github.com/me/gen"), from the go_module plugin opt. The gorm
+	// target joins it with the database/schema dirs to import each per-schema
+	// models package from the generated migration aggregator. Empty when unset.
+	GoModule string
 }
 
 // Schema groups tables that share a namespace. Maps to a PostgreSQL schema.
@@ -80,7 +86,7 @@ type Enum struct {
 
 	// LocalName / LocalSQLName are the bare, schema-local enum names captured at
 	// build time, before any global-namespace qualification. Schema-namespaced
-	// targets (GORM, SQL, CSV) render these so the schema/package already
+	// targets (GORM, SQL) render these so the schema/package already
 	// disambiguating the enum isn't restated in its name; Prisma uses the
 	// possibly-qualified Name / SQLName.
 	LocalName    string

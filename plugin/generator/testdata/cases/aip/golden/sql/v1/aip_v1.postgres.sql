@@ -29,3 +29,26 @@ CREATE TABLE "aip_v1"."documents" (
     "delete_time"  TIMESTAMPTZ
 );
 CREATE INDEX "idx_documents_delete_time" ON "aip_v1"."documents" ("delete_time");
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "aip_v1"."documents" IS 'Document exercises the AIP-148/164 system fields: create_time/update_time become auto-managed audit timestamps, delete_time a nullable indexed soft-delete marker, and uid a UNIQUE server-assigned id — all with no protorm annotation.';
+COMMENT ON COLUMN "aip_v1"."documents"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "aip_v1"."documents"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "aip_v1"."documents"."uid" IS 'uid is the server-assigned unique id (AIP-148).';
+COMMENT ON COLUMN "aip_v1"."documents"."title" IS 'title is an ordinary required field.';
+COMMENT ON COLUMN "aip_v1"."documents"."create_time" IS 'create_time is set by the server on creation (AIP-148).';
+COMMENT ON COLUMN "aip_v1"."documents"."update_time" IS 'update_time is maintained by the server on every write (AIP-148).';
+COMMENT ON COLUMN "aip_v1"."documents"."delete_time" IS 'delete_time marks a soft-deleted row when set (AIP-164).';
+
+
+-- Auto-update triggers keep updated-at columns current on every UPDATE.
+CREATE OR REPLACE FUNCTION "aip_v1"."set_update_time"() RETURNS trigger AS $$
+BEGIN
+    NEW."update_time" = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "trg_documents_update_time" BEFORE UPDATE ON "aip_v1"."documents"
+    FOR EACH ROW EXECUTE FUNCTION "aip_v1"."set_update_time"();

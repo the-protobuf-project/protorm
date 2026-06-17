@@ -26,3 +26,25 @@ CREATE TABLE "inventory"."shelves" (
     -- Timestamp when the record was last updated.
     "updated_at"  TIMESTAMPTZ  NOT NULL  DEFAULT now()
 );
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "inventory"."shelves" IS 'Shelf groups books physically. The resource''s `plural` fixes the irregular plural ("shelfs" → "shelves") — no table name override needed.';
+COMMENT ON COLUMN "inventory"."shelves"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "inventory"."shelves"."name" IS 'name: IDENTIFIER → PRIMARY KEY, VARCHAR(255).';
+COMMENT ON COLUMN "inventory"."shelves"."theme" IS 'theme: REQUIRED → NOT NULL VARCHAR(255).';
+COMMENT ON COLUMN "inventory"."shelves"."capacity" IS 'capacity is the number of books the shelf holds; nullable INTEGER.';
+COMMENT ON COLUMN "inventory"."shelves"."created_at" IS 'Timestamp when the record was created.';
+COMMENT ON COLUMN "inventory"."shelves"."updated_at" IS 'Timestamp when the record was last updated.';
+
+
+-- Auto-update triggers keep updated-at columns current on every UPDATE.
+CREATE OR REPLACE FUNCTION "inventory"."set_updated_at"() RETURNS trigger AS $$
+BEGIN
+    NEW."updated_at" = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "trg_shelves_updated_at" BEFORE UPDATE ON "inventory"."shelves"
+    FOR EACH ROW EXECUTE FUNCTION "inventory"."set_updated_at"();

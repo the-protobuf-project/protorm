@@ -3,7 +3,11 @@ package generator
 // fk.go holds the foreign-key post-passes that run after resolveRelations:
 // indexing FK columns and degrading unresolved references into soft FKs.
 
-import "github.com/the-protobuf-project/protorm/plugin/generator/schema"
+import (
+	"strings"
+
+	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+)
 
 // indexForeignKeys adds a single-column index for every foreign-key column that
 // isn't already covered by one. PostgreSQL indexes primary keys and unique
@@ -12,6 +16,11 @@ import "github.com/the-protobuf-project/protorm/plugin/generator/schema"
 // almost never intentional; a PK/unique/explicit index on the same column
 // suppresses the duplicate. Runs after resolveRelations so only kept FKs (not
 // dropped, unresolved ones) are indexed.
+//
+// A multi-column index covers its leading column for single-column lookups (a
+// PostgreSQL B-tree serves the leftmost prefix), so a composite index whose
+// first column is the FK suppresses the standalone FK index — emitting both
+// would just add write and storage overhead for no read benefit.
 func indexForeignKeys(db *schema.Database) {
 	for _, s := range db.Schemas {
 		for _, t := range s.Tables {
@@ -22,8 +31,8 @@ func indexForeignKeys(db *schema.Database) {
 				}
 			}
 			for _, idx := range t.Indexes {
-				if len(idx.Columns) == 1 {
-					indexed[idx.Columns[0]] = true
+				if len(idx.Columns) > 0 {
+					indexed[idx.Columns[0]] = true // leading column is covered by the index prefix
 				}
 			}
 			for _, fk := range t.ForeignKeys {
@@ -32,6 +41,23 @@ func indexForeignKeys(db *schema.Database) {
 				}
 				indexed[fk.Column] = true
 				t.Indexes = append(t.Indexes, &schema.Index{Columns: []string{fk.Column}})
+			}
+		}
+	}
+}
+
+// nameIndexes assigns a deterministic name to every index that doesn't declare
+// one, so all targets reference the same identifier. The scheme matches what the
+// SQL target historically generated inline ("idx_<table>_<col>_<col>"); GORM's
+// index struct tags reuse it so the two backends produce the same physical
+// schema. Runs after indexForeignKeys so synthesized FK indexes are named too.
+func nameIndexes(db *schema.Database) {
+	for _, s := range db.Schemas {
+		for _, t := range s.Tables {
+			for _, idx := range t.Indexes {
+				if idx.Name == "" {
+					idx.Name = "idx_" + t.Name + "_" + strings.Join(idx.Columns, "_")
+				}
 			}
 		}
 	}

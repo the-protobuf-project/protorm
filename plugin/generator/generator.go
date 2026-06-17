@@ -10,7 +10,6 @@ package generator
 import (
 	"fmt"
 
-	"github.com/the-protobuf-project/protorm/plugin/generator/csv"
 	"github.com/the-protobuf-project/protorm/plugin/generator/gorm"
 	"github.com/the-protobuf-project/protorm/plugin/generator/prisma"
 	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
@@ -29,8 +28,15 @@ import (
 //	      - target=sql
 type Options struct {
 	// Target selects the output backend.
-	// Accepted values: "prisma", "gorm", "sql", "csv".
+	// Accepted values: "prisma", "gorm", "sql".
 	Target string
+
+	// GoModule is the Go import path of the directory the generated tree is
+	// written into (e.g. "github.com/me/gen"). The gorm target needs it to build
+	// the per-database migration aggregator, whose package imports each
+	// per-schema models package by its full import path. Empty disables the
+	// aggregator (the per-schema model packages still generate).
+	GoModule string
 
 	// Strict is the per-rule severity spec for recoverable schema problems.
 	// "" warns on everything (default); "true" makes every rule a hard error;
@@ -54,7 +60,6 @@ var registry = map[string]schema.Target{
 	"prisma": &prisma.Generator{},
 	"gorm":   &gorm.Generator{},
 	"sql":    &sqlgen.Generator{},
-	"csv":    &csv.Generator{},
 }
 
 // Generate is the single entry point called from the plugin binary.
@@ -67,14 +72,14 @@ func Generate(p *protogen.Plugin, opts Options) error {
 	if opts.Target == "" {
 		return fmt.Errorf(
 			"protorm: required option \"target\" is missing — " +
-				"add opt: [target=prisma|gorm|sql|csv] to your buf.gen.yaml plugin entry",
+				"add opt: [target=prisma|gorm|sql] to your buf.gen.yaml plugin entry",
 		)
 	}
 
 	target, ok := registry[opts.Target]
 	if !ok {
 		return fmt.Errorf(
-			"protorm: unknown target %q — valid targets: prisma, gorm, sql, csv",
+			"protorm: unknown target %q — valid targets: prisma, gorm, sql",
 			opts.Target,
 		)
 	}
@@ -98,6 +103,7 @@ func Generate(p *protogen.Plugin, opts Options) error {
 	for _, db := range dbs {
 		db.PluginVersion = opts.Version
 		db.ProtocVersion = protoc
+		db.GoModule = opts.GoModule
 	}
 
 	return target.Generate(p, dbs)

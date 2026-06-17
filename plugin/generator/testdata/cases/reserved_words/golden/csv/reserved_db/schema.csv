@@ -1,6 +1,0 @@
-database,schema,table,column,sql_type,not_null,primary_key,unique,default,description
-reserved_db,public,user,id,CHAR(26),true,true,false,,Unique identifier for the record.
-reserved_db,public,user,name,VARCHAR(255),true,false,true,,name: IDENTIFIER → PRIMARY KEY.
-reserved_db,public,user,order,VARCHAR(255),false,false,false,,order is a reserved word; also carries a single-column index.
-reserved_db,public,user,select,VARCHAR(255),false,false,false,,select is a reserved word.
-reserved_db,public,user,state,enum:state,false,false,false,,"state exercises a quoted, schema-qualified enum type reference."

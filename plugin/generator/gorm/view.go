@@ -56,6 +56,7 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 		for _, col := range t.Columns {
 			used[gormFieldName(col)] = true
 		}
+		idxTags := indexTagsByColumn(t)
 		for _, col := range t.Columns {
 			gt := goType(col)
 			needTime = needTime || strings.Contains(gt, "time.Time")
@@ -64,7 +65,7 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 			goField := gormFieldName(col)
 			m.Fields = append(m.Fields, fieldView{
 				Comment: col.Comment,
-				Decl:    goField + " " + gt + " `" + structTag(col) + "`",
+				Decl:    goField + " " + gt + " `" + structTag(col, idxTags[col.Name]) + "`",
 			})
 			// BelongsTo association: emitted alongside the FK column. The field is
 			// named after the FK column (minus _id) so multiple references to the

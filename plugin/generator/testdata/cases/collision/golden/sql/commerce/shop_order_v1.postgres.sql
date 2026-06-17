@@ -25,3 +25,11 @@ CREATE TABLE "shop_order_v1"."moneys" (
     -- Status is an order-side enum whose simple name collides with cart.Status.
     "status"  "shop_order_v1"."status"  NOT NULL  DEFAULT 'SHIPPED'
 );
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "shop_order_v1"."moneys" IS 'Money is the order-side resource sharing the simple name "Money" with the cart-side one. See cart.proto for how each target renders the collision.';
+COMMENT ON COLUMN "shop_order_v1"."moneys"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "shop_order_v1"."moneys"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "shop_order_v1"."moneys"."amount" IS 'Amount in minor units.';
+COMMENT ON COLUMN "shop_order_v1"."moneys"."status" IS 'Status is an order-side enum whose simple name collides with cart.Status.';

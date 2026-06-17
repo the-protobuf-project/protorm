@@ -20,3 +20,10 @@ CREATE TABLE "calendar_app"."events" (
     -- title is the event's display title.
     "title"  VARCHAR(255)  NOT NULL
 );
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "calendar_app"."events" IS 'Event is a calendar app resource. The layout config routes it to the "users" database, schema "calendar_app".';
+COMMENT ON COLUMN "calendar_app"."events"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "calendar_app"."events"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "calendar_app"."events"."title" IS 'title is the event''s display title.';

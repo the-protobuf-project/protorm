@@ -63,6 +63,7 @@ func buildDatabases(p *protogen.Plugin, diags *diagnostics, layout *layoutConfig
 		resolveRelations(db, diags)
 		dedupeEnums(db, diags)
 		indexForeignKeys(db)
+		nameIndexes(db)
 		validateIndexes(db, diags)
 	}
 	return order, nil

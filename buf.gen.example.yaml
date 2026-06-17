@@ -1,13 +1,12 @@
 version: v2
 
-# Generates all four backend targets from the bookstore example protos.
+# Generates all three backend targets from the bookstore example protos.
 # Run: buf generate --template buf.gen.example.yaml
 #
 # Output layout mirrors the hand-written schema/ tree:
 #   prisma/<db>/schema.prisma + <db>/<schema>/<domain>.postgres.prisma
-#   gorm/<db>/<schemapkg>/models.go
-#   sql/<db>/<schema>.postgres.sql
-#   csv/<db>/schema.csv
+#   gorm/<db>/<schemapkg>/models.go + gorm/<db>/migrate.go (factory registry)
+#   sql/<db>/<schema>.postgres.sql + sql/<db>/migrate.sql (consolidated)
 #
 # The M entries supply the Go import-path mapping protogen requires for every
 # .proto it processes, so example protos don't need `option go_package`.
@@ -26,6 +25,9 @@ plugins:
     out: examples/generated/gorm
     opt:
       - target=gorm
+      # go_module is the import path of the gorm out: directory, so the generated
+      # migration aggregator can import each per-schema models package.
+      - go_module=github.com/the-protobuf-project/protorm/examples/generated/gorm
       - Mbookstore/v1/bookstore.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
       - Mbookstore/v1/inventory.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
 
@@ -33,12 +35,5 @@ plugins:
     out: examples/generated/sql
     opt:
       - target=sql
-      - Mbookstore/v1/bookstore.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
-      - Mbookstore/v1/inventory.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
-
-  - local: protoc-gen-protorm
-    out: examples/generated/csv
-    opt:
-      - target=csv
       - Mbookstore/v1/bookstore.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
       - Mbookstore/v1/inventory.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1

@@ -1,9 +1,9 @@
 // Package docs renders the Markdown README — a Mermaid ER diagram plus a
 // model/enum reference — that every backend emits beside its generated output,
-// so a GORM, SQL, or CSV tree is documented the same way the Prisma tree already
+// so a GORM or SQL tree is documented the same way the Prisma tree already
 // was. The rendering primitives are target-agnostic: a Naming chooses whether
 // models and enums appear under their globally-qualified names (Prisma's one
-// namespace per database) or their bare, schema-local names (GORM, SQL, CSV,
+// namespace per database) or their bare, schema-local names (GORM, SQL,
 // where the schema or Go package already disambiguates them).
 package docs
 
@@ -38,7 +38,7 @@ var Qualified = Naming{
 	Ref:   func(m string) string { return m },
 }
 
-// Local renders the bare, schema-local names — used by the GORM, SQL, and CSV
+// Local renders the bare, schema-local names — used by the GORM and SQL
 // READMEs, where the schema or package already namespaces each model. Ref maps a
 // qualified ReferencedModel back to the local name of the table it points at.
 func Local(db *schema.Database) Naming {
@@ -71,7 +71,7 @@ type Meta struct {
 
 // Render assembles the full README for one database: heading, model/enum counts,
 // a Mermaid ER diagram of the whole database, the target's output notes, then a
-// per-schema model and enum reference. Used by the GORM, SQL, and CSV targets;
+// per-schema model and enum reference. Used by the GORM and SQL targets;
 // the Prisma target keeps its own per-folder tree but shares the primitives
 // below.
 func Render(db *schema.Database, meta Meta) string {

@@ -160,8 +160,6 @@ model EventAttendees {
 
   /// Unique constraint on [event_id, attendee_id].
   @@unique([eventID, attendeeID])
-  /// Composite index on [event_id].
-  @@index([eventID])
   /// Composite index on [attendee_id].
   @@index([attendeeID])
   /// Maps the model to the "event_attendees" table in the database.

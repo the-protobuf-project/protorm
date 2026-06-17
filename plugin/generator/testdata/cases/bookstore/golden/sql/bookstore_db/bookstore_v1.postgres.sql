@@ -51,4 +51,34 @@ CREATE TABLE "bookstore_v1"."books" (
     CONSTRAINT "fk_books_author_id" FOREIGN KEY ("author_id") REFERENCES "bookstore_v1"."authors"("id") ON DELETE CASCADE
 );
 CREATE INDEX "idx_books_author_year" ON "bookstore_v1"."books" ("author_id", "published_year");
-CREATE INDEX "idx_books_author_id" ON "bookstore_v1"."books" ("author_id");
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "bookstore_v1"."authors" IS 'Author is a top-level resource. Inferred table: bookstore_v1.authors. id: ID_STRATEGY_ULID synthesizes a generated `id` PK and demotes the AIP resource name to a UNIQUE lookup column; timestamps adds created_at/updated_at.';
+COMMENT ON COLUMN "bookstore_v1"."authors"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "bookstore_v1"."authors"."name" IS 'name is the AIP resource name; UNIQUE NOT NULL lookup key (id is the PK).';
+COMMENT ON COLUMN "bookstore_v1"."authors"."display_name" IS 'display_name is REQUIRED → NOT NULL; string → VARCHAR(255) default.';
+COMMENT ON COLUMN "bookstore_v1"."authors"."bio" IS 'bio is free-form; override the VARCHAR(255) default to unbounded TEXT, nullable.';
+COMMENT ON COLUMN "bookstore_v1"."authors"."created_at" IS 'Timestamp when the record was created.';
+COMMENT ON COLUMN "bookstore_v1"."authors"."updated_at" IS 'Timestamp when the record was last updated.';
+COMMENT ON TABLE "bookstore_v1"."books" IS 'Book is a resource nested under Author. Inferred table: bookstore_v1.books.';
+COMMENT ON COLUMN "bookstore_v1"."books"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "bookstore_v1"."books"."name" IS 'name: IDENTIFIER → PRIMARY KEY, VARCHAR(255).';
+COMMENT ON COLUMN "bookstore_v1"."books"."title" IS 'title: REQUIRED NOT NULL; max_length caps the VARCHAR provider-neutrally.';
+COMMENT ON COLUMN "bookstore_v1"."books"."author_id" IS 'author_id references Author; protorm infers the FOREIGN KEY, aligns the column type with the referenced PK (CHAR(26) ULID), and applies CASCADE.';
+COMMENT ON COLUMN "bookstore_v1"."books"."isbn" IS 'isbn must be globally unique; custom fixed-width type.';
+COMMENT ON COLUMN "bookstore_v1"."books"."published_year" IS 'published_year is a plain integer column; nullable.';
+COMMENT ON COLUMN "bookstore_v1"."books"."genre" IS 'genre demonstrates proto enum → database enum generation.';
+COMMENT ON COLUMN "bookstore_v1"."books"."create_time" IS 'create_time is set by the database on insert.';
+
+
+-- Auto-update triggers keep updated-at columns current on every UPDATE.
+CREATE OR REPLACE FUNCTION "bookstore_v1"."set_updated_at"() RETURNS trigger AS $$
+BEGIN
+    NEW."updated_at" = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "trg_authors_updated_at" BEFORE UPDATE ON "bookstore_v1"."authors"
+    FOR EACH ROW EXECUTE FUNCTION "bookstore_v1"."set_updated_at"();

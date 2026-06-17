@@ -23,8 +23,9 @@ erDiagram
 ## Output
 
 - `<schema>/models.go` — one Go package per schema, one struct per table.
+- `migrate.go` — a factory `Registry` (with a preloaded `Default`) that migrates every model in one call; emitted when the `go_module` opt is set.
 - Nullable columns are pointer types; proto enums become string-typed Go enums.
-- Wire the structs into a `*gorm.DB`; run AutoMigrate, or apply the SQL target's DDL.
+- Attach in main: `Default.Migrate(db)`, or wire the structs into a `*gorm.DB` and run AutoMigrate yourself.
 
 ## Schema `kitchen`
 

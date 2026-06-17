@@ -26,7 +26,7 @@ import (
 
 var update = flag.Bool("update", false, "rewrite golden files with current output")
 
-var allTargets = []string{"prisma", "gorm", "sql", "csv"}
+var allTargets = []string{"prisma", "gorm", "sql"}
 
 func TestGolden(t *testing.T) {
 	cases, err := os.ReadDir("testdata/cases")
@@ -76,7 +76,10 @@ func runTarget(t *testing.T, req *pluginpb.CodeGeneratorRequest, configPath, tar
 	if err != nil {
 		t.Fatalf("protogen: %v", err)
 	}
-	if err := Generate(p, Options{Target: target, ConfigPath: configPath}); err != nil {
+	// GoModule mirrors the go_module plugin opt so the gorm target emits its
+	// migration aggregator; other targets ignore it.
+	opts := Options{Target: target, ConfigPath: configPath, GoModule: "example.com/test/gen"}
+	if err := Generate(p, opts); err != nil {
 		t.Fatalf("generate %s: %v", target, err)
 	}
 	resp := p.Response()

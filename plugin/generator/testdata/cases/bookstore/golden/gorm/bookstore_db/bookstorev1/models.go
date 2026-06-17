@@ -59,12 +59,12 @@ type Book struct {
 	// title: REQUIRED NOT NULL; max_length caps the VARCHAR provider-neutrally.
 	Title string `gorm:"column:title;not null" json:"title" validate:"required"`
 	// author_id references Author; protorm infers the FOREIGN KEY, aligns the column type with the referenced PK (CHAR(26) ULID), and applies CASCADE.
-	AuthorID string  `gorm:"column:author_id;not null" json:"author_id" validate:"required"`
+	AuthorID string  `gorm:"column:author_id;not null;index:idx_books_author_year,priority:1" json:"author_id" validate:"required"`
 	Author   *Author `gorm:"foreignKey:AuthorID;constraint:OnDelete:CASCADE" json:"author,omitempty"`
 	// isbn must be globally unique; custom fixed-width type.
 	ISBN *string `gorm:"column:isbn;uniqueIndex" json:"isbn,omitempty"`
 	// published_year is a plain integer column; nullable.
-	PublishedYear *int32 `gorm:"column:published_year" json:"published_year,omitempty"`
+	PublishedYear *int32 `gorm:"column:published_year;index:idx_books_author_year,priority:2" json:"published_year,omitempty"`
 	// genre demonstrates proto enum → database enum generation.
 	Genre Genre `gorm:"column:genre;not null;default:'FICTION'" json:"genre" validate:"required"`
 	// create_time is set by the database on insert.

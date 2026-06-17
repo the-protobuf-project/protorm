@@ -1,9 +1,0 @@
-database,schema,table,column,sql_type,not_null,primary_key,unique,default,description
-commerce,shop_cart_v1,moneys,id,CHAR(26),true,true,false,,Unique identifier for the record.
-commerce,shop_cart_v1,moneys,name,VARCHAR(255),true,false,true,,Resource name; the AIP identifier.
-commerce,shop_cart_v1,moneys,amount,BIGINT,true,false,false,,Amount in minor units.
-commerce,shop_cart_v1,moneys,status,enum:status,true,false,false,PENDING,Status is a cart-side enum whose simple name collides with order.Status.
-commerce,shop_order_v1,moneys,id,CHAR(26),true,true,false,,Unique identifier for the record.
-commerce,shop_order_v1,moneys,name,VARCHAR(255),true,false,true,,Resource name; the AIP identifier.
-commerce,shop_order_v1,moneys,amount,BIGINT,true,false,false,,Amount in minor units.
-commerce,shop_order_v1,moneys,status,enum:status,true,false,false,SHIPPED,Status is an order-side enum whose simple name collides with cart.Status.

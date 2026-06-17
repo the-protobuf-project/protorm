@@ -27,13 +27,13 @@ type Event struct {
 	// Map fields stay JSONB.
 	Labels json.RawMessage `gorm:"column:labels" json:"labels,omitempty"`
 	// Foreign key to Location.
-	LocationID string    `gorm:"column:location_id;not null" json:"location_id" validate:"required"`
+	LocationID string    `gorm:"column:location_id;not null;index:idx_events_location_id" json:"location_id" validate:"required"`
 	Location   *Location `gorm:"foreignKey:LocationID;constraint:OnDelete:CASCADE" json:"location,omitempty"`
 	// Foreign key to Location.
-	BillingID *string   `gorm:"column:billing_id" json:"billing_id,omitempty"`
+	BillingID *string   `gorm:"column:billing_id;index:idx_events_billing_id" json:"billing_id,omitempty"`
 	Billing   *Location `gorm:"foreignKey:BillingID;constraint:OnDelete:SET NULL" json:"billing,omitempty"`
 	// Foreign key to Metadata.
-	MetadataID *string   `gorm:"column:metadata_id" json:"metadata_id,omitempty"`
+	MetadataID *string   `gorm:"column:metadata_id;index:idx_events_metadata_id" json:"metadata_id,omitempty"`
 	Metadata   *Metadata `gorm:"foreignKey:MetadataID;constraint:OnDelete:SET NULL" json:"metadata,omitempty"`
 	// Back-relation: Attendee records that reference this via event_id.
 	Attendees []Attendee `gorm:"foreignKey:EventID" json:"attendees,omitempty"`
@@ -52,7 +52,7 @@ type Attendee struct {
 	// Email address of the attendee.
 	Email string `gorm:"column:email;not null" json:"email" validate:"required"`
 	// Parent reference to Event (from the AIP resource pattern).
-	EventID string `gorm:"column:event_id;not null" json:"event_id" validate:"required"`
+	EventID string `gorm:"column:event_id;not null;index:idx_attendees_event_id" json:"event_id" validate:"required"`
 	Event   *Event `gorm:"foreignKey:EventID;constraint:OnDelete:CASCADE" json:"event,omitempty"`
 	// Back-relation: Metadata records that reference this via owner.
 	Metadatas []Metadata `gorm:"foreignKey:Owner" json:"metadatas,omitempty"`
@@ -87,7 +87,7 @@ type Metadata struct {
 	// Arbitrary tags.
 	Tags []string `gorm:"column:tags" json:"tags,omitempty"`
 	// Singular resource reference → belongs-to with a bare-named FK column (`owner`, no `_id`). Its auto-index must name the scalar field `ownerID`, not the `owner` relation field, or Prisma rejects the @@index.
-	OwnerID *string   `gorm:"column:owner" json:"owner,omitempty"`
+	OwnerID *string   `gorm:"column:owner;index:idx_metadatas_owner" json:"owner,omitempty"`
 	Owner   *Attendee `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
 	// Back-relation: Event records that reference this via metadata_id.
 	Events []Event `gorm:"foreignKey:MetadataID" json:"events,omitempty"`
@@ -100,10 +100,10 @@ type EventAttendees struct {
 	// Unique identifier for the record.
 	ID string `gorm:"column:id;primaryKey;not null" json:"id"`
 	// Foreign key to Event.
-	EventID string `gorm:"column:event_id;not null" json:"event_id" validate:"required"`
+	EventID string `gorm:"column:event_id;not null;uniqueIndex:idx_event_attendees_event_id_attendee_id,priority:1" json:"event_id" validate:"required"`
 	Event   *Event `gorm:"foreignKey:EventID;constraint:OnDelete:CASCADE" json:"event,omitempty"`
 	// Foreign key to Attendee.
-	AttendeeID string    `gorm:"column:attendee_id;not null" json:"attendee_id" validate:"required"`
+	AttendeeID string    `gorm:"column:attendee_id;not null;uniqueIndex:idx_event_attendees_event_id_attendee_id,priority:2;index:idx_event_attendees_attendee_id" json:"attendee_id" validate:"required"`
 	Attendee   *Attendee `gorm:"foreignKey:AttendeeID;constraint:OnDelete:CASCADE" json:"attendee,omitempty"`
 }
 

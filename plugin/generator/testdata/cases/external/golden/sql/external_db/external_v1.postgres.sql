@@ -36,3 +36,16 @@ CREATE TABLE "external_v1"."moneys" (
     -- Number of nano (10^-9) units of the amount.
     "nanos"  INTEGER
 );
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "external_v1"."products" IS 'Product owns a price expressed as an imported Money value type.';
+COMMENT ON COLUMN "external_v1"."products"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "external_v1"."products"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "external_v1"."products"."title" IS 'Human-readable product title.';
+COMMENT ON COLUMN "external_v1"."products"."price_id" IS 'Foreign key to Money.';
+COMMENT ON TABLE "external_v1"."moneys" IS 'Money is an amount of money with its currency type.';
+COMMENT ON COLUMN "external_v1"."moneys"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "external_v1"."moneys"."currency_code" IS 'The three-letter ISO 4217 currency code.';
+COMMENT ON COLUMN "external_v1"."moneys"."units" IS 'Whole units of the amount.';
+COMMENT ON COLUMN "external_v1"."moneys"."nanos" IS 'Number of nano (10^-9) units of the amount.';

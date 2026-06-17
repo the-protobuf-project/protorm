@@ -20,3 +20,10 @@ CREATE TABLE "fleet_tracking_device"."trackers" (
     -- serial is the device's hardware serial number.
     "serial"  VARCHAR(255)  NOT NULL
 );
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "fleet_tracking_device"."trackers" IS 'Tracker is a fleet device resource. The layout config routes it to the "fleet" database, schema "fleet_tracking_device".';
+COMMENT ON COLUMN "fleet_tracking_device"."trackers"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "fleet_tracking_device"."trackers"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "fleet_tracking_device"."trackers"."serial" IS 'serial is the device''s hardware serial number.';

@@ -20,3 +20,15 @@ CREATE TABLE {{.Ref}} (
 {{range .Indexes}}{{.}}
 {{end}}
 {{- end}}
+{{- if .Comments}}
+
+-- Column and table documentation, persisted to the catalog.
+{{range .Comments}}{{.}}
+{{end}}{{- end}}
+{{- if .Functions}}
+
+-- Auto-update triggers keep updated-at columns current on every UPDATE.
+{{range .Functions}}{{.}}
+{{end}}
+{{range .Triggers}}{{.}}
+{{end}}{{- end}}

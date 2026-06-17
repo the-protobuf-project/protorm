@@ -26,7 +26,8 @@ type Generator struct{}
 // Name returns the target identifier used in buf.gen.yaml opt: [target=sql].
 func (g *Generator) Name() string { return "sql" }
 
-// Generate writes one .postgres.sql file per schema into the plugin response.
+// Generate writes one .postgres.sql file per schema plus a consolidated
+// migrate.sql into the plugin response.
 func (g *Generator) Generate(p *protogen.Plugin, dbs []*schema.Database) error {
 	for _, db := range dbs {
 		if types.Provider(db.Provider) == types.MongoDB {
@@ -39,13 +40,21 @@ func (g *Generator) Generate(p *protogen.Plugin, dbs []*schema.Database) error {
 				return fmt.Errorf("sql: %s: %w", path, err)
 			}
 		}
+		// Consolidated single-file migration: every schema, ordered so it applies
+		// in one transaction (foreign keys deferred to ALTER statements).
+		migratePath := db.Name + "/migrate.sql"
+		mf := p.NewGeneratedFile(migratePath, "")
+		if err := templates.Render(mf, "migrate.sql.tpl", migrateView(db)); err != nil {
+			return fmt.Errorf("sql: %s: %w", migratePath, err)
+		}
 		rf := p.NewGeneratedFile(db.Name+"/README.md", "")
 		md := docs.Render(db, docs.Meta{
 			Title:   "PostgreSQL schema",
 			Tagline: "CREATE SCHEMA / TYPE / TABLE DDL with foreign keys and indexes.",
 			Outputs: []string{
-				"`<schema>.postgres.sql` — one DDL file per schema.",
-				"Apply referenced tables before referencing ones, or wrap all files in a single transaction.",
+				"`migrate.sql` — the whole database in one transactional file; apply with `psql -f migrate.sql`.",
+				"`<schema>.postgres.sql` — one DDL file per schema (apply referenced tables before referencing ones).",
+				"Auto-update triggers keep updated-at columns current; COMMENT ON persists field docs to the catalog.",
 			},
 			Naming: docs.Local(db),
 		})

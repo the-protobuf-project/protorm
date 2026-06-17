@@ -20,7 +20,7 @@ type Product struct {
 	// Human-readable product title.
 	Title string `gorm:"column:title;not null" json:"title" validate:"required"`
 	// Foreign key to Money.
-	PriceID string `gorm:"column:price_id;not null" json:"price_id" validate:"required"`
+	PriceID string `gorm:"column:price_id;not null;index:idx_products_price_id" json:"price_id" validate:"required"`
 	Price   *Money `gorm:"foreignKey:PriceID;constraint:OnDelete:CASCADE" json:"price,omitempty"`
 }
 

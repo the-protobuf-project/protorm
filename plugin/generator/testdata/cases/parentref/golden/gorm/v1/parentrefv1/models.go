@@ -34,7 +34,7 @@ type Note struct {
 	// body is the note's text.
 	Body string `gorm:"column:body;not null" json:"body" validate:"required"`
 	// Parent reference to User (from the AIP resource pattern).
-	UserID string `gorm:"column:user_id;not null" json:"user_id" validate:"required"`
+	UserID string `gorm:"column:user_id;not null;index:idx_notes_user_id" json:"user_id" validate:"required"`
 	User   *User  `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"user,omitempty"`
 }
 

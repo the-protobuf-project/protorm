@@ -34,3 +34,15 @@ CREATE TABLE "parentref_v1"."notes" (
     CONSTRAINT "fk_notes_user_id" FOREIGN KEY ("user_id") REFERENCES "parentref_v1"."users"("id") ON DELETE CASCADE
 );
 CREATE INDEX "idx_notes_user_id" ON "parentref_v1"."notes" ("user_id");
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "parentref_v1"."users" IS 'User is the parent resource.';
+COMMENT ON COLUMN "parentref_v1"."users"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "parentref_v1"."users"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "parentref_v1"."users"."display_name" IS 'display_name is shown in UIs.';
+COMMENT ON TABLE "parentref_v1"."notes" IS 'Note is owned by a User. Its pattern carries a {user} parent segment with no corresponding field, so protorm materializes a user_id FK → User from the pattern alone.';
+COMMENT ON COLUMN "parentref_v1"."notes"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "parentref_v1"."notes"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "parentref_v1"."notes"."body" IS 'body is the note''s text.';
+COMMENT ON COLUMN "parentref_v1"."notes"."user_id" IS 'Parent reference to User (from the AIP resource pattern).';

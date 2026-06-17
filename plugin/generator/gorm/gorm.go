@@ -40,6 +40,15 @@ func (g *Generator) Generate(p *protogen.Plugin, dbs []*schema.Database) error {
 				return fmt.Errorf("gorm: %s/%s: %w", db.Name, pkg, err)
 			}
 		}
+		// The migration aggregator imports each per-schema package by its full Go
+		// import path, so it can only be generated when go_module gives us the
+		// output tree's base import path.
+		if db.GoModule != "" {
+			mf := p.NewGeneratedFile(fmt.Sprintf("%s/migrate.go", db.Name), "")
+			if err := templates.Render(mf, "migrate.go.tpl", aggregateView(db)); err != nil {
+				return fmt.Errorf("gorm: %s/migrate.go: %w", db.Name, err)
+			}
+		}
 		if err := writeReadme(p, db); err != nil {
 			return err
 		}
@@ -56,8 +65,9 @@ func writeReadme(p *protogen.Plugin, db *schema.Database) error {
 		Tagline: "Go structs with GORM struct tags — one package per schema.",
 		Outputs: []string{
 			"`<schema>/models.go` — one Go package per schema, one struct per table.",
+			"`migrate.go` — a factory `Registry` (with a preloaded `Default`) that migrates every model in one call; emitted when the `go_module` opt is set.",
 			"Nullable columns are pointer types; proto enums become string-typed Go enums.",
-			"Wire the structs into a `*gorm.DB`; run AutoMigrate, or apply the SQL target's DDL.",
+			"Attach in main: `Default.Migrate(db)`, or wire the structs into a `*gorm.DB` and run AutoMigrate yourself.",
 		},
 		Naming: docs.Local(db),
 	})

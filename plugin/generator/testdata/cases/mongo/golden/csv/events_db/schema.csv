@@ -1,7 +1,0 @@
-database,schema,table,column,sql_type,not_null,primary_key,unique,default,description
-events_db,events,events,id,CHAR(26),true,true,false,,Unique identifier for the record.
-events_db,events,events,name,VARCHAR(255),true,false,true,,"name: IDENTIFIER → primary key, mapped to _id."
-events_db,events,events,kind,VARCHAR(255),true,false,false,,kind: REQUIRED string.
-events_db,events,events,payload,JSONB,false,false,false,,payload: nested document stored as Json.
-events_db,events,events,occurrence_time,TIMESTAMPTZ,false,false,false,,occurrence_time → DateTime.
-events_db,events,events,score,DOUBLE PRECISION,false,false,false,,score: double → Float.

@@ -12,7 +12,7 @@
 //	  - local: protoc-gen-protorm
 //	    out: generated/
 //	    opt:
-//	      - target=prisma   # prisma | gorm | sql | csv
+//	      - target=prisma   # prisma | gorm | sql
 //
 // # Inference priority
 //
@@ -80,7 +80,7 @@ func main() {
 
 	target := flags.String(
 		"target", "",
-		"output backend: prisma | gorm | sql | csv",
+		"output backend: prisma | gorm | sql",
 	)
 	strict := flags.String(
 		"strict", "",
@@ -90,6 +90,11 @@ func main() {
 	config := flags.String(
 		"config", "",
 		"path to a protorm.yaml mapping proto packages to databases/schemas",
+	)
+	goModule := flags.String(
+		"go_module", "",
+		"Go import path of the output directory (e.g. github.com/me/gen); the gorm "+
+			"target needs it to generate the migration aggregator that imports each schema package",
 	)
 
 	protogen.Options{
@@ -106,6 +111,7 @@ func main() {
 			Strict:     *strict,
 			Version:    ver,
 			ConfigPath: *config,
+			GoModule:   *goModule,
 		})
 	})
 }

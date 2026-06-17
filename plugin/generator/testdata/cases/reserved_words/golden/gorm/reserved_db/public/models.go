@@ -29,9 +29,9 @@ type Account struct {
 	// name: IDENTIFIER → PRIMARY KEY.
 	Name string `gorm:"column:name;not null;uniqueIndex" json:"name" validate:"required"`
 	// order is a reserved word; also carries a single-column index.
-	Order *string `gorm:"column:order;index" json:"order,omitempty"`
+	Order *string `gorm:"column:order;index;uniqueIndex:idx_user_order_select,priority:1" json:"order,omitempty"`
 	// select is a reserved word.
-	Select *string `gorm:"column:select" json:"select,omitempty"`
+	Select *string `gorm:"column:select;uniqueIndex:idx_user_order_select,priority:2" json:"select,omitempty"`
 	// state exercises a quoted, schema-qualified enum type reference.
 	State *State `gorm:"column:state" json:"state,omitempty"`
 }

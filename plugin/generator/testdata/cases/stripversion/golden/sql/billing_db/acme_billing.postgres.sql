@@ -20,3 +20,10 @@ CREATE TABLE "acme_billing"."invoices" (
     -- Amount due, in minor units.
     "amount"  VARCHAR(255)  NOT NULL
 );
+
+
+-- Column and table documentation, persisted to the catalog.
+COMMENT ON TABLE "acme_billing"."invoices" IS 'Invoice lands in schema "acme_billing", not "acme_billing_v1": the protorm.yaml strip_version option flattens the trailing API version out of the resource-type-derived schema name.';
+COMMENT ON COLUMN "acme_billing"."invoices"."id" IS 'Unique identifier for the record.';
+COMMENT ON COLUMN "acme_billing"."invoices"."name" IS 'Resource name; the AIP identifier.';
+COMMENT ON COLUMN "acme_billing"."invoices"."amount" IS 'Amount due, in minor units.';

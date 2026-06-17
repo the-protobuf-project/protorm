@@ -1,0 +1,46 @@
+{{.Header}}
+
+BEGIN;
+
+-- Schemas
+{{range .Schemas}}CREATE SCHEMA IF NOT EXISTS {{.}};
+{{end}}
+{{- if .Enums}}
+-- Enum types
+{{range .Enums}}-- {{.Comment}}
+CREATE TYPE {{.TypeRef}} AS ENUM ({{.ValueList}});
+{{end}}{{- end}}
+-- Tables (foreign keys are added after every table exists, so creation order
+-- never matters — even across schemas or reference cycles).
+{{range .Tables}}
+{{- if .Comment}}
+-- {{.Comment}}
+{{- end}}
+CREATE TABLE {{.Ref}} (
+{{- range .Cols}}
+{{- if .Comment}}
+    -- {{.Comment}}
+{{- end}}
+    {{.Def}}{{if not .Last}},{{end}}
+{{- end}}
+);
+{{end}}
+{{- if .Alters}}
+-- Foreign keys
+{{range .Alters}}{{.}}
+{{end}}{{- end}}
+{{- if .Indexes}}
+-- Indexes
+{{range .Indexes}}{{.}}
+{{end}}{{- end}}
+{{- if .Comments}}
+-- Documentation
+{{range .Comments}}{{.}}
+{{end}}{{- end}}
+{{- if .Functions}}
+-- Auto-update triggers
+{{range .Functions}}{{.}}
+{{end}}
+{{range .Triggers}}{{.}}
+{{end}}{{- end}}
+COMMIT;
