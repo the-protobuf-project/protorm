@@ -259,7 +259,7 @@ common case needs **no annotations**. Each is overridable.
 | Enum hygiene | The AIP `*_UNSPECIFIED = 0` sentinel is dropped; a required enum column defaults to its first value. | `(protorm.v1.column).default_value` |
 | `oneof` integrity | A `oneof` adds a `<oneof>_case` discriminator enum recording which member is set. | — |
 | Soft FK | A `resource_reference` to a model outside the generation set is kept as an indexed scalar column with a `TODO` note, not dropped. | provide the referenced resource |
-| Relationalized nesting | Every user-defined nested message becomes its own child table with a primary key + foreign key — never an opaque `JSONB` blob — so the structure stays queryable. Required links cascade on delete, optional links null. (`map` fields and `google.*` well-known types stay `JSONB`: they can't become tables.) | `(protorm.v1.column).on_delete` |
+| Relationalized nesting | Every message-typed field becomes its own child table with a primary key + foreign key — never an opaque `JSONB` blob — so the structure stays queryable. This covers user-defined nested messages **and** imported value types (`google.type.Money`, `PostalAddress`, a third-party proto), read straight from the descriptor set protoc already supplies — no source or network fetch. Required links cascade on delete, optional links null. (`map` fields and the freeform `google.protobuf` wrappers — `Struct`, `Any`, `Value`, `ListValue`, `Empty` — stay `JSONB`; well-known scalar types like `Timestamp` stay single columns.) | `(protorm.v1.column).on_delete` |
 
 ---
 
@@ -323,13 +323,16 @@ own type system. Highlights:
 | `enum` | a `CREATE TYPE` enum | `enum` | typed string consts |
 | `Timestamp` | `TIMESTAMPTZ` | `DateTime` | `time.Time` |
 | `Duration` | `INTERVAL` | `String` | `string` |
-| `map` / well-known msg | `JSONB` | `Json` | `json.RawMessage` |
-| nested message | child table (PK + FK) | relation | relation struct |
+| `map` / freeform msg (`Struct`, `Any`) | `JSONB` | `Json` | `json.RawMessage` |
+| nested / imported value msg | child table (PK + FK) | relation | relation struct |
 | `repeated` scalar | `T[]` | `T[]` | `[]T` |
 
 Unsigned 32/64-bit kinds widen one step (`uint32`→`BIGINT`) so the full range
-fits. `google.type.*` (Date, Money, LatLng, …) and the wrapper types are mapped
-too. Nullable columns become pointer (`*T`) / optional (`T?`) types.
+fits. Well-known types with a clean single-column form — `Timestamp`, `Duration`,
+the wrappers, `google.type.Date` / `LatLng` / `Decimal` — map to a column;
+structured value types (`google.type.Money`, `PostalAddress`, …) relationalize
+into a child table instead (see [Relationalized nesting](#defaults-applied-automatically)).
+Nullable columns become pointer (`*T`) / optional (`T?`) types.
 
 ---
 

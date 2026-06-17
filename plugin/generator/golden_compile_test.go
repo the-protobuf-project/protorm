@@ -50,10 +50,21 @@ func buildRequest(t *testing.T, dir string) *pluginpb.CodeGeneratorRequest {
 	}
 	sort.Strings(protos)
 
+	// A case may ship an imports/ directory of .proto files that are compiled and
+	// importable but never added to file_to_generate — standing in for external,
+	// non-generated dependencies (google/type/*, a vendored common.proto). They
+	// exercise the imported-message relationalization path without depending on
+	// genproto having those descriptors linked into the test binary.
+	importPaths := []string{protoDir}
+	if fi, err := os.Stat(filepath.Join(dir, "imports")); err == nil && fi.IsDir() {
+		importPaths = append(importPaths, filepath.Join(dir, "imports"))
+	}
+
 	compiler := protocompile.Compiler{
 		Resolver: protocompile.WithStandardImports(protocompile.CompositeResolver{
-			// Case protos are compiled from source so doc comments forward.
-			&protocompile.SourceResolver{ImportPaths: []string{protoDir}},
+			// Case protos (and any imports/ deps) are compiled from source so doc
+			// comments forward.
+			&protocompile.SourceResolver{ImportPaths: importPaths},
 			// google/api/* and protorm/v1/* are served from the already-compiled
 			// global registry (linked in via the generator's imports), so no
 			// vendored .proto copies live in the workspace to drift or get linted.

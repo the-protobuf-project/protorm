@@ -79,6 +79,35 @@ func messagePostgres(fullName string) string {
 	return "JSONB"
 }
 
+// freeformMessage is the set of google.protobuf messages whose shape is dynamic
+// or type-erased: arbitrary JSON (Struct, Value, ListValue), a boxed message of
+// any type (Any), or an empty marker (Empty). They have no stable column layout,
+// so they stay JSONB rather than being relationalized into a table.
+var freeformMessage = map[string]bool{
+	"google.protobuf.Struct":    true,
+	"google.protobuf.Value":     true,
+	"google.protobuf.ListValue": true,
+	"google.protobuf.Any":       true,
+	"google.protobuf.Empty":     true,
+}
+
+// Relationalizable reports whether a message-typed field should be normalized
+// into its own table (a primary key plus the foreign key linking it to its
+// owner) rather than mapped to a single column. It is false for well-known types
+// with a native single-column SQL mapping (Timestamp, Duration, the wrappers,
+// Date, LatLng, …) and for the freeform google.protobuf wrappers (Struct, Any,
+// …), both of which keep their scalar / JSONB mapping. Every other message —
+// a user-defined nested message and an imported value type alike
+// (google.type.Money, google.type.PostalAddress, a third-party proto) — is
+// relationalized, so its structure stays queryable instead of collapsing into
+// an opaque JSONB blob.
+func Relationalizable(fullName string) bool {
+	if _, ok := wellKnownPostgres[fullName]; ok {
+		return false
+	}
+	return !freeformMessage[fullName]
+}
+
 // goScalar maps a bare PostgreSQL keyword (no modifiers, no array suffix) to a
 // Go type. Types without a lossless Go primitive (NUMERIC, MONEY, UUID, INET,
 // POINT, INTERVAL, ranges, …) map to string to stay driver-agnostic.

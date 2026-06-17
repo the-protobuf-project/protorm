@@ -18,13 +18,12 @@ package generator
 // message is materialized at most once per database.
 
 import (
-	"strings"
-
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/compiler/protogen"
 
 	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
 	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
+	"github.com/the-protobuf-project/protorm/plugin/generator/types"
 )
 
 // buildCtx carries the cross-file state the lossless build needs: every proto
@@ -50,8 +49,14 @@ type embedReq struct {
 	onUpdate   string
 }
 
-// newBuildCtx indexes every message (including nested) in the generate-flagged
-// files so embedded children can be located regardless of which file defines them.
+// newBuildCtx indexes every message (including nested) across all files in the
+// request — both the generate-flagged files and their imported dependencies — so
+// an embedded child can be materialized regardless of which file defines it.
+// Indexing imports is what lets an imported value type (google.type.Money, a
+// vendored common.proto) be relationalized into a table; protoc ships the full
+// transitive descriptor set in the request, so no source or network fetch is
+// needed. Unreferenced imported messages cost only a map entry: a message is
+// only materialized when a field actually relationalizes to it.
 func newBuildCtx(p *protogen.Plugin, layout *layoutConfig) *buildCtx {
 	idx := map[string]*protogen.Message{}
 	var walk func(msgs []*protogen.Message)
@@ -62,24 +67,25 @@ func newBuildCtx(p *protogen.Plugin, layout *layoutConfig) *buildCtx {
 		}
 	}
 	for _, f := range p.Files {
-		if f.Generate {
-			walk(f.Messages)
-		}
+		walk(f.Messages)
 	}
 	return &buildCtx{msgIndex: idx, layout: layout}
 }
 
 // normalizableMessage returns the referenced message's full name when field f is
-// a user-defined message that should be normalized into a related table, or ""
-// otherwise. Maps, scalar/enum fields, and well-known google.* messages (which
-// map to native SQL types or JSONB) are not normalized.
+// a message-typed field that should be normalized into a related table, or ""
+// otherwise. Maps and non-relationalizable messages — well-known types with a
+// native scalar mapping (Timestamp, Duration, the wrappers, …) and the freeform
+// google.protobuf wrappers (Struct, Any, …) — are not normalized; they keep
+// their scalar / JSONB mapping. Every other message is, including imported value
+// types such as google.type.Money (see types.Relationalizable).
 func normalizableMessage(f *protogen.Field) string {
 	md := f.Desc.Message()
 	if md == nil || f.Desc.IsMap() {
 		return ""
 	}
 	full := string(md.FullName())
-	if strings.HasPrefix(full, "google.") {
+	if !types.Relationalizable(full) {
 		return ""
 	}
 	return full
@@ -104,8 +110,17 @@ func (ctx *buildCtx) normalizeEmbeds(diags *diagnostics) {
 		req := ctx.embeds[i]
 		msg := ctx.msgIndex[req.targetMsg]
 		if msg == nil {
+			// The descriptor set lacks the referenced message (no source for it was
+			// supplied to protoc). Keep the data rather than drop the field: fall
+			// back to a JSONB column, and surface the gap instead of staying silent.
 			diags.warnf("ref", "table %q field %q references message %q which is not in the "+
-				"generate set; left unmapped", req.parent.Name, req.field.Desc.Name(), req.targetMsg)
+				"descriptor set; kept as a JSONB column", req.parent.Name, req.field.Desc.Name(), req.targetMsg)
+			req.parent.Columns = append(req.parent.Columns, &schema.Column{
+				Name:     string(req.field.Desc.Name()),
+				Comment:  cleanComment(req.field.Comments.Leading),
+				SQLType:  "JSONB",
+				Optional: true,
+			})
 			continue
 		}
 		child := ctx.materialize(req.db, req.schemaName, msg)

@@ -54,6 +54,41 @@ func TestWellKnownPostgres(t *testing.T) {
 	}
 }
 
+// TestRelationalizable covers the message-classification rule that decides
+// whether a message-typed field becomes a related table (PK + FK) or keeps a
+// scalar / JSONB mapping. Well-known scalar types and the freeform google.protobuf
+// wrappers stay; every other message — imported value types and user-defined
+// nested messages alike — is relationalized.
+func TestRelationalizable(t *testing.T) {
+	cases := map[string]bool{
+		// Native single-column mappings stay scalar (not a table).
+		"google.protobuf.Timestamp":   false,
+		"google.protobuf.Duration":    false,
+		"google.protobuf.Int64Value":  false,
+		"google.protobuf.StringValue": false,
+		"google.protobuf.FieldMask":   false,
+		"google.type.Date":            false,
+		"google.type.LatLng":          false,
+		// Freeform / type-erased wrappers stay JSONB (not a table).
+		"google.protobuf.Struct":    false,
+		"google.protobuf.Value":     false,
+		"google.protobuf.ListValue": false,
+		"google.protobuf.Any":       false,
+		"google.protobuf.Empty":     false,
+		// Imported value types relationalize into their own table.
+		"google.type.Money":         true,
+		"google.type.PostalAddress": true,
+		"google.type.PhoneNumber":   true,
+		// User-defined nested messages relationalize too.
+		"example.v1.CustomMessage": true,
+	}
+	for in, want := range cases {
+		if got := Relationalizable(in); got != want {
+			t.Errorf("Relationalizable(%q) = %v, want %v", in, got, want)
+		}
+	}
+}
+
 func TestBaseType(t *testing.T) {
 	cases := []struct {
 		in    string
