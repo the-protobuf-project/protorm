@@ -10,7 +10,7 @@
 //
 // protorm — https://github.com/the-protobuf-project/protorm
 
-datasource billingdbpgsql {
+datasource billing_db {
   provider = "postgresql"
   schemas  = ["acme_billing"]
 }

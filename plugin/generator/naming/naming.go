@@ -143,11 +143,18 @@ func GoPackage(s string) string {
 	return strings.ToLower(strings.ReplaceAll(s, "_", ""))
 }
 
-// DatasourceName builds a Prisma datasource identifier from the database name
-// and provider suffix, matching the hand-written convention:
-// ("bookstore_db", "pgsql") → "bookstoredbpgsql".
-func DatasourceName(dbName, suffix string) string {
-	return strings.ReplaceAll(dbName, "_", "") + suffix
+// DatasourceName returns a valid Prisma datasource identifier for the database.
+// The block name is just a label (nothing references it), so the database name
+// is used directly — "bookstore_db" → "bookstore_db". A leading digit, illegal
+// for a Prisma identifier, is prefixed with "db_"; other names pass through.
+func DatasourceName(dbName string) string {
+	if dbName == "" {
+		return "db"
+	}
+	if c := dbName[0]; c >= '0' && c <= '9' {
+		return "db_" + dbName
+	}
+	return dbName
 }
 
 // EnumValueName strips the enum-name prefix from a proto enum value, per the

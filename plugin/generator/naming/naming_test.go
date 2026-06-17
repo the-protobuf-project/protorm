@@ -96,8 +96,15 @@ func TestGoPackage(t *testing.T) {
 }
 
 func TestDatasourceName(t *testing.T) {
-	if got := DatasourceName("bookstore_db", "pgsql"); got != "bookstoredbpgsql" {
-		t.Errorf("DatasourceName = %q, want bookstoredbpgsql", got)
+	cases := map[string]string{
+		"bookstore_db": "bookstore_db", // valid identifier passes through
+		"2fa":          "db_2fa",       // leading digit is illegal in Prisma → prefixed
+		"":             "db",           // empty falls back to a generic label
+	}
+	for in, want := range cases {
+		if got := DatasourceName(in); got != want {
+			t.Errorf("DatasourceName(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 

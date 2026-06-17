@@ -10,7 +10,7 @@
 //
 // protorm — https://github.com/the-protobuf-project/protorm
 
-datasource userspgsql {
+datasource users {
   provider = "postgresql"
   schemas  = ["calendar_app"]
 }

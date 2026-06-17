@@ -6,7 +6,7 @@
 -- database: users
 -- schemas:  calendar_app
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -19,7 +19,7 @@ CREATE SCHEMA IF NOT EXISTS "calendar_app";
 -- never matters — even across schemas or reference cycles).
 
 -- Event is a calendar app resource. The layout config routes it to the "users" database, schema "calendar_app".
-CREATE TABLE "calendar_app"."events" (
+CREATE TABLE IF NOT EXISTS "calendar_app"."events" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.

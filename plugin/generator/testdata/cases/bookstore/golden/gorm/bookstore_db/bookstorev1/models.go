@@ -66,7 +66,7 @@ type Book struct {
 	// published_year is a plain integer column; nullable.
 	PublishedYear *int32 `gorm:"column:published_year;index:idx_books_author_year,priority:2" json:"published_year,omitempty"`
 	// genre demonstrates proto enum → database enum generation.
-	Genre Genre `gorm:"column:genre;not null;default:'FICTION'" json:"genre" validate:"required"`
+	Genre Genre `gorm:"column:genre;not null;default:'FICTION';check:chk_books_genre,genre IN ('FICTION','NON_FICTION','SCI_FI','FANTASY')" json:"genre" validate:"required"`
 	// create_time is set by the database on insert.
 	CreateTime time.Time `gorm:"column:create_time;not null;autoCreateTime" json:"create_time"`
 }

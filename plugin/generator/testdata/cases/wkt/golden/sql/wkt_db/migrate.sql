@@ -6,7 +6,7 @@
 -- database: wkt_db
 -- schemas:  kitchen
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -19,7 +19,7 @@ CREATE SCHEMA IF NOT EXISTS "kitchen";
 -- never matters — even across schemas or reference cycles).
 
 -- Sink is one table holding every interesting type mapping.
-CREATE TABLE "kitchen"."sinks" (
+CREATE TABLE IF NOT EXISTS "kitchen"."sinks" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- name: IDENTIFIER → PRIMARY KEY.

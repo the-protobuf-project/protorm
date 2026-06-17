@@ -6,7 +6,7 @@
 -- database: commerce
 -- schemas:  shop_cart_v1, shop_order_v1
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -17,16 +17,20 @@ CREATE SCHEMA IF NOT EXISTS "shop_cart_v1";
 CREATE SCHEMA IF NOT EXISTS "shop_order_v1";
 
 -- Enum types
--- Status enumerates cart payment states.
-CREATE TYPE "shop_cart_v1"."status" AS ENUM ('PENDING', 'PAID');
--- Status enumerates order fulfillment states.
-CREATE TYPE "shop_order_v1"."status" AS ENUM ('SHIPPED', 'DELIVERED');
+DO $$ BEGIN
+    CREATE TYPE "shop_cart_v1"."status" AS ENUM ('PENDING', 'PAID');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+DO $$ BEGIN
+    CREATE TYPE "shop_order_v1"."status" AS ENUM ('SHIPPED', 'DELIVERED');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
 -- Tables (foreign keys are added after every table exists, so creation order
 -- never matters — even across schemas or reference cycles).
 
 -- Money is a cart-side resource. Its simple name "Money" collides with the order-side Money once both packages merge into the "commerce" database (see protorm.yaml). Prisma qualifies the colliding model names (its models share one global namespace), while the schema-namespaced targets — GORM (one package per schema), SQL, and CSV — keep the bare "Money", since the schema already disambiguates them.
-CREATE TABLE "shop_cart_v1"."moneys" (
+CREATE TABLE IF NOT EXISTS "shop_cart_v1"."moneys" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.
@@ -38,7 +42,7 @@ CREATE TABLE "shop_cart_v1"."moneys" (
 );
 
 -- Money is the order-side resource sharing the simple name "Money" with the cart-side one. See cart.proto for how each target renders the collision.
-CREATE TABLE "shop_order_v1"."moneys" (
+CREATE TABLE IF NOT EXISTS "shop_order_v1"."moneys" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.

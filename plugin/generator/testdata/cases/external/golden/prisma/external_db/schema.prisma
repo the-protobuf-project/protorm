@@ -10,7 +10,7 @@
 //
 // protorm — https://github.com/the-protobuf-project/protorm
 
-datasource externaldbpgsql {
+datasource external_db {
   provider = "postgresql"
   schemas  = ["external_v1"]
 }

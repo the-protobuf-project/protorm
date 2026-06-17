@@ -10,7 +10,7 @@
 //
 // protorm — https://github.com/the-protobuf-project/protorm
 
-datasource v1pgsql {
+datasource v1 {
   provider = "postgresql"
   schemas  = ["aip_v1"]
 }

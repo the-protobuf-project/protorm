@@ -6,7 +6,7 @@
 -- database: reserved_db
 -- schemas:  public
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -16,14 +16,16 @@ BEGIN;
 CREATE SCHEMA IF NOT EXISTS "public";
 
 -- Enum types
--- State is the account lifecycle state.
-CREATE TYPE "public"."state" AS ENUM ('ACTIVE', 'CLOSED');
+DO $$ BEGIN
+    CREATE TYPE "public"."state" AS ENUM ('ACTIVE', 'CLOSED');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
 -- Tables (foreign keys are added after every table exists, so creation order
 -- never matters — even across schemas or reference cycles).
 
 -- Account is forced onto the reserved table name "user" via a table override, with reserved-word columns and a composite UNIQUE index over them.
-CREATE TABLE "public"."user" (
+CREATE TABLE IF NOT EXISTS "public"."user" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- name: IDENTIFIER → PRIMARY KEY.
@@ -37,7 +39,7 @@ CREATE TABLE "public"."user" (
 );
 
 -- Indexes
-CREATE UNIQUE INDEX "idx_user_order_select" ON "public"."user" ("order", "select");
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_user_order_select" ON "public"."user" ("order", "select");
 
 -- Documentation
 COMMENT ON TABLE "public"."user" IS 'Account is forced onto the reserved table name "user" via a table override, with reserved-word columns and a composite UNIQUE index over them.';

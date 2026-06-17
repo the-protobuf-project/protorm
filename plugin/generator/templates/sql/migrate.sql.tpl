@@ -5,10 +5,9 @@ BEGIN;
 -- Schemas
 {{range .Schemas}}CREATE SCHEMA IF NOT EXISTS {{.}};
 {{end}}
-{{- if .Enums}}
+{{- if .EnumStmts}}
 -- Enum types
-{{range .Enums}}-- {{.Comment}}
-CREATE TYPE {{.TypeRef}} AS ENUM ({{.ValueList}});
+{{range .EnumStmts}}{{.}}
 {{end}}{{- end}}
 -- Tables (foreign keys are added after every table exists, so creation order
 -- never matters — even across schemas or reference cycles).
@@ -16,7 +15,7 @@ CREATE TYPE {{.TypeRef}} AS ENUM ({{.ValueList}});
 {{- if .Comment}}
 -- {{.Comment}}
 {{- end}}
-CREATE TABLE {{.Ref}} (
+CREATE TABLE IF NOT EXISTS {{.Ref}} (
 {{- range .Cols}}
 {{- if .Comment}}
     -- {{.Comment}}

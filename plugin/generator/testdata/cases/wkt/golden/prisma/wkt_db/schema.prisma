@@ -10,7 +10,7 @@
 //
 // protorm — https://github.com/the-protobuf-project/protorm
 
-datasource wktdbpgsql {
+datasource wkt_db {
   provider = "postgresql"
   schemas  = ["kitchen"]
 }

@@ -6,7 +6,7 @@
 -- database: v1
 -- schemas:  oneof_v1
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -16,14 +16,16 @@ BEGIN;
 CREATE SCHEMA IF NOT EXISTS "oneof_v1";
 
 -- Enum types
--- Discriminator for the input oneof of Audio.
-CREATE TYPE "oneof_v1"."audio_input_case" AS ENUM ('AUDIO_DATA', 'UPLOAD_PATH', 'LIVE_PIPELINE_FILE_PATH');
+DO $$ BEGIN
+    CREATE TYPE "oneof_v1"."audio_input_case" AS ENUM ('AUDIO_DATA', 'UPLOAD_PATH', 'LIVE_PIPELINE_FILE_PATH');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
 
 -- Tables (foreign keys are added after every table exists, so creation order
 -- never matters — even across schemas or reference cycles).
 
 -- Audio exercises oneof integrity: the `input` oneof flattens to independent nullable columns, and protorm adds a generated input_case discriminator enum recording which member is set so the lost exclusivity invariant is observable.
-CREATE TABLE "oneof_v1"."audios" (
+CREATE TABLE IF NOT EXISTS "oneof_v1"."audios" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.

@@ -63,9 +63,13 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 			needJSON = needJSON || strings.Contains(gt, "json.RawMessage")
 
 			goField := gormFieldName(col)
+			extra := idxTags[col.Name]
+			if col.Enum != nil {
+				extra = append(extra, enumCheck(t.Name, col))
+			}
 			m.Fields = append(m.Fields, fieldView{
 				Comment: col.Comment,
-				Decl:    goField + " " + gt + " `" + structTag(col, idxTags[col.Name]) + "`",
+				Decl:    goField + " " + gt + " `" + structTag(col, extra) + "`",
 			})
 			// BelongsTo association: emitted alongside the FK column. The field is
 			// named after the FK column (minus _id) so multiple references to the

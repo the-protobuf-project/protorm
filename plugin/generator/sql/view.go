@@ -64,7 +64,7 @@ func schemaView(db *schema.Database, s *schema.Schema) map[string]any {
 		tables = append(tables, tableViewOf(s, t))
 	}
 
-	ddl := schemaDDLOf(s)
+	ddl := schemaDDLOf(s, false) // per-schema files use plain, readable CREATE TRIGGER
 	return map[string]any{
 		"Header": header.Render("--", header.Info{
 			PluginVersion: db.PluginVersion,
@@ -109,7 +109,11 @@ func enumDDLViews(s *schema.Schema) []enumDDLView {
 // never collides across schemas; each owning table gets a BEFORE UPDATE trigger
 // that fires it. COMMENT ON persists every table/column comment into the catalog
 // (the inline -- comments in the DDL file are not stored by PostgreSQL).
-func schemaDDLOf(s *schema.Schema) schemaDDL {
+//
+// orReplace emits CREATE OR REPLACE TRIGGER (PostgreSQL 14+) so the consolidated
+// migrate.sql is safe to re-apply; the per-schema reference files pass false for
+// plain, readable CREATE TRIGGER.
+func schemaDDLOf(s *schema.Schema, orReplace bool) schemaDDL {
 	var ddl schemaDDL
 	funcSeen := map[string]bool{}
 	for _, t := range s.Tables {
@@ -119,7 +123,7 @@ func schemaDDLOf(s *schema.Schema) schemaDDL {
 					funcSeen[c.Name] = true
 					ddl.Functions = append(ddl.Functions, updatedAtFunction(s.Name, c.Name))
 				}
-				ddl.Triggers = append(ddl.Triggers, updatedAtTrigger(s.Name, t.Name, c.Name))
+				ddl.Triggers = append(ddl.Triggers, updatedAtTrigger(s.Name, t.Name, c.Name, orReplace))
 			}
 		}
 		ddl.Comments = append(ddl.Comments, tableComments(s.Name, t)...)
@@ -128,7 +132,7 @@ func schemaDDLOf(s *schema.Schema) schemaDDL {
 }
 
 // updatedAtFunction renders the trigger function that stamps now() onto an
-// auto-update column on every UPDATE.
+// auto-update column on every UPDATE. CREATE OR REPLACE makes it re-runnable.
 func updatedAtFunction(schemaName, col string) string {
 	return fmt.Sprintf(
 		"CREATE OR REPLACE FUNCTION %s() RETURNS trigger AS $$\nBEGIN\n    NEW.%s = now();\n    RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;",
@@ -136,11 +140,16 @@ func updatedAtFunction(schemaName, col string) string {
 }
 
 // updatedAtTrigger renders the BEFORE UPDATE trigger wiring a table to its
-// auto-update function.
-func updatedAtTrigger(schemaName, table, col string) string {
+// auto-update function. orReplace selects CREATE OR REPLACE TRIGGER (idempotent,
+// PostgreSQL 14+) over plain CREATE TRIGGER.
+func updatedAtTrigger(schemaName, table, col string, orReplace bool) string {
+	verb := "CREATE TRIGGER"
+	if orReplace {
+		verb = "CREATE OR REPLACE TRIGGER"
+	}
 	return fmt.Sprintf(
-		"CREATE TRIGGER %s BEFORE UPDATE ON %s\n    FOR EACH ROW EXECUTE FUNCTION %s();",
-		quoteIdent("trg_"+table+"_"+col), qualified(schemaName, table), qualified(schemaName, "set_"+col))
+		"%s %s BEFORE UPDATE ON %s\n    FOR EACH ROW EXECUTE FUNCTION %s();",
+		verb, quoteIdent("trg_"+table+"_"+col), qualified(schemaName, table), qualified(schemaName, "set_"+col))
 }
 
 // tableComments renders COMMENT ON statements for a table and its commented columns.
@@ -173,16 +182,19 @@ type migrateTableView struct {
 // COMMENT ON. The whole file is wrapped in a transaction by the template.
 func migrateView(db *schema.Database) map[string]any {
 	var schemaNames []string
-	var enums []enumDDLView
+	var enumStmts []string
 	var tables []migrateTableView
 	var alters, indexes, functions, triggers, comments []string
 
 	for _, s := range db.Schemas {
 		schemaNames = append(schemaNames, quoteIdent(s.Name))
-		enums = append(enums, enumDDLViews(s)...)
+		for _, e := range enumDDLViews(s) {
+			enumStmts = append(enumStmts, idempotentEnum(e))
+		}
 
 		for _, t := range s.Tables {
-			mt := migrateTableView{Comment: t.Comment, Ref: qualified(s.Name, t.Name)}
+			ref := qualified(s.Name, t.Name)
+			mt := migrateTableView{Comment: t.Comment, Ref: ref}
 			for _, col := range t.Columns {
 				mt.Cols = append(mt.Cols, itemView{Comment: col.Comment, Def: colDef(s, col)})
 			}
@@ -191,13 +203,18 @@ func migrateView(db *schema.Database) map[string]any {
 			}
 			tables = append(tables, mt)
 
+			// Drop-then-add makes each FK re-runnable: the first apply is a no-op
+			// drop + add, a re-apply replaces the existing constraint in place.
 			for _, fk := range t.ForeignKeys {
-				alters = append(alters, "ALTER TABLE "+qualified(s.Name, t.Name)+" ADD "+fkDef(t.Name, fk)+";")
+				cname := quoteIdent("fk_" + t.Name + "_" + fk.Column)
+				alters = append(alters,
+					"ALTER TABLE "+ref+" DROP CONSTRAINT IF EXISTS "+cname+";",
+					"ALTER TABLE "+ref+" ADD "+fkDef(t.Name, fk)+";")
 			}
-			indexes = append(indexes, indexStmts(s, t)...)
+			indexes = append(indexes, indexStmts(s, t, true)...)
 		}
 
-		ddl := schemaDDLOf(s)
+		ddl := schemaDDLOf(s, true) // CREATE OR REPLACE TRIGGER — safe to re-apply
 		functions = append(functions, ddl.Functions...)
 		triggers = append(triggers, ddl.Triggers...)
 		comments = append(comments, ddl.Comments...)
@@ -210,10 +227,10 @@ func migrateView(db *schema.Database) map[string]any {
 			Database:      db.Name,
 			SchemaLabel:   "schemas",
 			Schema:        strings.Join(schemaLabels(db), ", "),
-			Notes:         []string{"Single-file migration: every schema, applied in one transaction."},
+			Notes:         []string{"Single-file migration: every schema in one transaction. Idempotent — safe to re-apply."},
 		}),
 		"Schemas":   schemaNames,
-		"Enums":     enums,
+		"EnumStmts": enumStmts,
 		"Tables":    tables,
 		"Alters":    alters,
 		"Indexes":   indexes,
@@ -221,6 +238,15 @@ func migrateView(db *schema.Database) map[string]any {
 		"Triggers":  triggers,
 		"Comments":  comments,
 	}
+}
+
+// idempotentEnum wraps CREATE TYPE in a DO block that swallows the duplicate
+// error, since PostgreSQL has no CREATE TYPE IF NOT EXISTS. This lets the
+// consolidated migration re-run without failing on an enum that already exists.
+func idempotentEnum(e enumDDLView) string {
+	return fmt.Sprintf(
+		"DO $$ BEGIN\n    CREATE TYPE %s AS ENUM (%s);\nEXCEPTION WHEN duplicate_object THEN null;\nEND $$;",
+		e.TypeRef, e.ValueList)
 }
 
 // schemaLabels returns the bare schema names for the migrate.sql banner.
@@ -246,15 +272,20 @@ func tableViewOf(s *schema.Schema, t *schema.Table) tableView {
 		tv.Items[n-1].Last = true
 	}
 
-	tv.Indexes = indexStmts(s, t)
+	tv.Indexes = indexStmts(s, t, false)
 	return tv
 }
 
 // indexStmts renders the CREATE INDEX statements for a table. Names come from the
 // build's nameIndexes pass, so the consolidated migrate.sql and per-schema files
-// reference identical index identifiers.
-func indexStmts(s *schema.Schema, t *schema.Table) []string {
+// reference identical index identifiers. ifNotExists adds IF NOT EXISTS so the
+// re-runnable migrate.sql skips indexes that already exist.
+func indexStmts(s *schema.Schema, t *schema.Table, ifNotExists bool) []string {
 	var out []string
+	guard := ""
+	if ifNotExists {
+		guard = "IF NOT EXISTS "
+	}
 	for _, idx := range t.Indexes {
 		cols := make([]string, len(idx.Columns))
 		for i, c := range idx.Columns {
@@ -265,8 +296,8 @@ func indexStmts(s *schema.Schema, t *schema.Table) []string {
 			unique = "UNIQUE "
 		}
 		out = append(out, fmt.Sprintf(
-			"CREATE %sINDEX %s ON %s (%s);",
-			unique, quoteIdent(idx.Name), qualified(s.Name, t.Name), strings.Join(cols, ", "),
+			"CREATE %sINDEX %s%s ON %s (%s);",
+			unique, guard, quoteIdent(idx.Name), qualified(s.Name, t.Name), strings.Join(cols, ", "),
 		))
 	}
 	return out

@@ -37,10 +37,11 @@ func goType(col *schema.Column) string {
 }
 
 // structTag builds the combined gorm + json + validate struct tag for a column.
-// idxFrags are the table-level index fragments (composite and synthesized FK
-// indexes) this column participates in, so GORM AutoMigrate creates the same
-// indexes the SQL target emits.
-func structTag(col *schema.Column, idxFrags []string) string {
+// extra are additional gorm fragments computed table-side: the index fragments
+// this column participates in (composite and synthesized FK indexes) and, for an
+// enum column, a CHECK constraint — so GORM AutoMigrate reproduces the same
+// indexes and enum value integrity the SQL target emits.
+func structTag(col *schema.Column, extra []string) string {
 	gormParts := []string{"column:" + col.Name}
 	if col.PrimaryKey {
 		gormParts = append(gormParts, "primaryKey")
@@ -66,7 +67,7 @@ func structTag(col *schema.Column, idxFrags []string) string {
 	if col.Index {
 		gormParts = append(gormParts, "index")
 	}
-	gormParts = append(gormParts, idxFrags...)
+	gormParts = append(gormParts, extra...)
 	tag := `gorm:"` + strings.Join(gormParts, ";") + `"`
 
 	if col.Optional {
@@ -106,6 +107,20 @@ func indexTagsByColumn(t *schema.Table) map[string][]string {
 		}
 	}
 	return out
+}
+
+// enumCheck renders a GORM CHECK-constraint tag fragment restricting an enum
+// column to its declared values, so AutoMigrate enforces the same value
+// integrity the SQL/Prisma targets get from a native enum type — GORM models an
+// enum as a plain string column, which otherwise accepts any text. The explicit
+// constraint name (before the first comma) keeps GORM from mis-parsing the
+// commas inside the IN list as the name/expression separator.
+func enumCheck(tableName string, col *schema.Column) string {
+	vals := make([]string, len(col.Enum.Values))
+	for i, v := range col.Enum.Values {
+		vals[i] = "'" + v.MapName + "'"
+	}
+	return "check:chk_" + tableName + "_" + col.Name + "," + col.Name + " IN (" + strings.Join(vals, ",") + ")"
 }
 
 // constraintTag renders the GORM constraint fragment for the FK on column

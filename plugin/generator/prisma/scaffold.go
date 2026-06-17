@@ -26,10 +26,6 @@ func schemaFileView(db *schema.Database, provider types.Provider) map[string]any
 		names = append(names, s.Name)
 		quoted = append(quoted, `"`+s.Name+`"`)
 	}
-	suffix := "pgsql"
-	if provider == types.MongoDB {
-		suffix = "mongo"
-	}
 	return map[string]any{
 		"Header": header.Render("//", header.Info{
 			PluginVersion: db.PluginVersion,
@@ -39,7 +35,10 @@ func schemaFileView(db *schema.Database, provider types.Provider) map[string]any
 			Schema:        strings.Join(names, ", "),
 			Notes:         []string{"Connection URLs live in " + db.Name + ".config.ts (Prisma 7 convention)."},
 		}),
-		"Datasource":  naming.DatasourceName(db.Name, suffix),
+		// The datasource block name is just a label (models/client never reference
+		// it), so use the database name directly — a valid, self-documenting Prisma
+		// identifier — instead of a mangled provider-suffixed form.
+		"Datasource":  naming.DatasourceName(db.Name),
 		"Provider":    provider.PrismaProvider(),
 		"SchemaList":  strings.Join(quoted, ", "),
 		"MultiSchema": provider == types.Postgres,

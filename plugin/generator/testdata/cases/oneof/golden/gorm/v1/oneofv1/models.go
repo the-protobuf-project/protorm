@@ -39,7 +39,7 @@ type Audio struct {
 	// sample_rate is a plain scalar outside the oneof.
 	SampleRate *int32 `gorm:"column:sample_rate" json:"sample_rate,omitempty"`
 	// Discriminator: which input oneof member is set (null = none).
-	InputCase *AudioInputCase `gorm:"column:input_case" json:"input_case,omitempty"`
+	InputCase *AudioInputCase `gorm:"column:input_case;check:chk_audios_input_case,input_case IN ('AUDIO_DATA','UPLOAD_PATH','LIVE_PIPELINE_FILE_PATH')" json:"input_case,omitempty"`
 }
 
 func (*Audio) TableName() string { return "oneof_v1.audios" }

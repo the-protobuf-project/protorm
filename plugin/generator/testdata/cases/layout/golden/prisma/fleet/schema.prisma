@@ -10,7 +10,7 @@
 //
 // protorm — https://github.com/the-protobuf-project/protorm
 
-datasource fleetpgsql {
+datasource fleet {
   provider = "postgresql"
   schemas  = ["fleet_tracking_device"]
 }

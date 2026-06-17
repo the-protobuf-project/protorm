@@ -6,7 +6,7 @@
 -- database: v1
 -- schemas:  parentref_v1
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -19,7 +19,7 @@ CREATE SCHEMA IF NOT EXISTS "parentref_v1";
 -- never matters — even across schemas or reference cycles).
 
 -- User is the parent resource.
-CREATE TABLE "parentref_v1"."users" (
+CREATE TABLE IF NOT EXISTS "parentref_v1"."users" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.
@@ -29,7 +29,7 @@ CREATE TABLE "parentref_v1"."users" (
 );
 
 -- Note is owned by a User. Its pattern carries a {user} parent segment with no corresponding field, so protorm materializes a user_id FK → User from the pattern alone.
-CREATE TABLE "parentref_v1"."notes" (
+CREATE TABLE IF NOT EXISTS "parentref_v1"."notes" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.
@@ -41,10 +41,11 @@ CREATE TABLE "parentref_v1"."notes" (
 );
 
 -- Foreign keys
+ALTER TABLE "parentref_v1"."notes" DROP CONSTRAINT IF EXISTS "fk_notes_user_id";
 ALTER TABLE "parentref_v1"."notes" ADD CONSTRAINT "fk_notes_user_id" FOREIGN KEY ("user_id") REFERENCES "parentref_v1"."users"("id") ON DELETE CASCADE;
 
 -- Indexes
-CREATE INDEX "idx_notes_user_id" ON "parentref_v1"."notes" ("user_id");
+CREATE INDEX IF NOT EXISTS "idx_notes_user_id" ON "parentref_v1"."notes" ("user_id");
 
 -- Documentation
 COMMENT ON TABLE "parentref_v1"."users" IS 'User is the parent resource.';

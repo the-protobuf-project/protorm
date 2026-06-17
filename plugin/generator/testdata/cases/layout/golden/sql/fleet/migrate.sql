@@ -6,7 +6,7 @@
 -- database: fleet
 -- schemas:  fleet_tracking_device
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -19,7 +19,7 @@ CREATE SCHEMA IF NOT EXISTS "fleet_tracking_device";
 -- never matters — even across schemas or reference cycles).
 
 -- Tracker is a fleet device resource. The layout config routes it to the "fleet" database, schema "fleet_tracking_device".
-CREATE TABLE "fleet_tracking_device"."trackers" (
+CREATE TABLE IF NOT EXISTS "fleet_tracking_device"."trackers" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.

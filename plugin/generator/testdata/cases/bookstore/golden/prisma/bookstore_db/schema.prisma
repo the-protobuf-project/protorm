@@ -10,7 +10,7 @@
 //
 // protorm — https://github.com/the-protobuf-project/protorm
 
-datasource bookstoredbpgsql {
+datasource bookstore_db {
   provider = "postgresql"
   schemas  = ["bookstore_v1", "inventory"]
 }

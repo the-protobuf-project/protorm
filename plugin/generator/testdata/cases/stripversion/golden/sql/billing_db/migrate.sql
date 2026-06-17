@@ -6,7 +6,7 @@
 -- database: billing_db
 -- schemas:  acme_billing
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -19,7 +19,7 @@ CREATE SCHEMA IF NOT EXISTS "acme_billing";
 -- never matters — even across schemas or reference cycles).
 
 -- Invoice lands in schema "acme_billing", not "acme_billing_v1": the protorm.yaml strip_version option flattens the trailing API version out of the resource-type-derived schema name.
-CREATE TABLE "acme_billing"."invoices" (
+CREATE TABLE IF NOT EXISTS "acme_billing"."invoices" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.

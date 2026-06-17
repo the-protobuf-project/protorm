@@ -6,7 +6,7 @@
 -- database: v1
 -- schemas:  aip_v1
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -19,7 +19,7 @@ CREATE SCHEMA IF NOT EXISTS "aip_v1";
 -- never matters — even across schemas or reference cycles).
 
 -- Document exercises the AIP-148/164 system fields: create_time/update_time become auto-managed audit timestamps, delete_time a nullable indexed soft-delete marker, and uid a UNIQUE server-assigned id — all with no protorm annotation.
-CREATE TABLE "aip_v1"."documents" (
+CREATE TABLE IF NOT EXISTS "aip_v1"."documents" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.
@@ -37,7 +37,7 @@ CREATE TABLE "aip_v1"."documents" (
 );
 
 -- Indexes
-CREATE INDEX "idx_documents_delete_time" ON "aip_v1"."documents" ("delete_time");
+CREATE INDEX IF NOT EXISTS "idx_documents_delete_time" ON "aip_v1"."documents" ("delete_time");
 
 -- Documentation
 COMMENT ON TABLE "aip_v1"."documents" IS 'Document exercises the AIP-148/164 system fields: create_time/update_time become auto-managed audit timestamps, delete_time a nullable indexed soft-delete marker, and uid a UNIQUE server-assigned id — all with no protorm annotation.';
@@ -57,7 +57,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER "trg_documents_update_time" BEFORE UPDATE ON "aip_v1"."documents"
+CREATE OR REPLACE TRIGGER "trg_documents_update_time" BEFORE UPDATE ON "aip_v1"."documents"
     FOR EACH ROW EXECUTE FUNCTION "aip_v1"."set_update_time"();
 
 COMMIT;

@@ -6,7 +6,7 @@
 -- database: external_db
 -- schemas:  external_v1
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -19,7 +19,7 @@ CREATE SCHEMA IF NOT EXISTS "external_v1";
 -- never matters — even across schemas or reference cycles).
 
 -- Product owns a price expressed as an imported Money value type.
-CREATE TABLE "external_v1"."products" (
+CREATE TABLE IF NOT EXISTS "external_v1"."products" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.
@@ -31,7 +31,7 @@ CREATE TABLE "external_v1"."products" (
 );
 
 -- Money is an amount of money with its currency type.
-CREATE TABLE "external_v1"."moneys" (
+CREATE TABLE IF NOT EXISTS "external_v1"."moneys" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- The three-letter ISO 4217 currency code.
@@ -43,10 +43,11 @@ CREATE TABLE "external_v1"."moneys" (
 );
 
 -- Foreign keys
+ALTER TABLE "external_v1"."products" DROP CONSTRAINT IF EXISTS "fk_products_price_id";
 ALTER TABLE "external_v1"."products" ADD CONSTRAINT "fk_products_price_id" FOREIGN KEY ("price_id") REFERENCES "external_v1"."moneys"("id") ON DELETE CASCADE;
 
 -- Indexes
-CREATE INDEX "idx_products_price_id" ON "external_v1"."products" ("price_id");
+CREATE INDEX IF NOT EXISTS "idx_products_price_id" ON "external_v1"."products" ("price_id");
 
 -- Documentation
 COMMENT ON TABLE "external_v1"."products" IS 'Product owns a price expressed as an imported Money value type.';

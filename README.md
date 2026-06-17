@@ -14,7 +14,7 @@ them for three backends from one source of truth.
 | --- | --- | --- |
 | **prisma** | A complete, runnable Prisma 7 project | multi-file schema, `package.json`, `tsconfig.json`, config, `.env.example` |
 | **gorm** | Go structs with GORM tags + a migration registry | one package per schema, pointer types for nullables, relation fields, a `migrate.go` factory `Registry` |
-| **sql** | PostgreSQL DDL | per-schema files **and** a single transactional `migrate.sql`; FK constraints, indexes, `updated_at` triggers, `COMMENT ON` |
+| **sql** | PostgreSQL DDL | per-schema reference files **and** a single transactional, **idempotent** `migrate.sql` (safe to re-apply); FK constraints, indexes, `updated_at` triggers, `COMMENT ON` |
 
 Every target also emits a `README.md` with a Mermaid ER diagram and a per-model
 column reference, so the generated tree is self-documenting regardless of backend.
@@ -211,8 +211,10 @@ bookstoredb.Default.Register(&MyModel{})  // add your own to the same registry
 ```
 
 The **sql** target emits one transactional `migrate.sql` you can apply in a
-single shot (foreign keys are deferred to `ALTER` statements, so creation order
-never matters), in addition to the per-schema files:
+single shot — foreign keys are deferred to `ALTER` statements (so creation order
+never matters) and every statement is guarded (`IF NOT EXISTS`, `CREATE OR
+REPLACE`, a `DO`-block for enums), so the file is **idempotent and safe to
+re-apply**. The per-schema files remain as clean, readable reference DDL.
 
 ```bash
 psql "$BOOKSTORE_DB_DATABASE_URL" -f generated/sql/bookstore_db/migrate.sql
@@ -342,7 +344,7 @@ own type system. Highlights:
 | `uint64` | `NUMERIC(20,0)` | `Decimal` | `string` |
 | `bool` | `BOOLEAN` | `Boolean` | `bool` |
 | `bytes` | `BYTEA` | `Bytes` | `[]byte` |
-| `enum` | a `CREATE TYPE` enum | `enum` | typed string consts |
+| `enum` | a `CREATE TYPE` enum | `enum` | typed string consts + `CHECK` constraint |
 | `Timestamp` | `TIMESTAMPTZ` | `DateTime` | `time.Time` |
 | `Duration` | `INTERVAL` | `String` | `string` |
 | `map` / freeform msg (`Struct`, `Any`) | `JSONB` | `Json` | `json.RawMessage` |

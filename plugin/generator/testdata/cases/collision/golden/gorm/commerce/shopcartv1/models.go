@@ -29,7 +29,7 @@ type Money struct {
 	// Amount in minor units.
 	Amount int64 `gorm:"column:amount;not null" json:"amount" validate:"required"`
 	// Status is a cart-side enum whose simple name collides with order.Status.
-	Status Status `gorm:"column:status;not null;default:'PENDING'" json:"status" validate:"required"`
+	Status Status `gorm:"column:status;not null;default:'PENDING';check:chk_moneys_status,status IN ('PENDING','PAID')" json:"status" validate:"required"`
 }
 
 func (*Money) TableName() string { return "shop_cart_v1.moneys" }

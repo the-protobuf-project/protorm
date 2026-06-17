@@ -6,7 +6,7 @@
 -- database: v1
 -- schemas:  embedded_v1
 --
--- Single-file migration: every schema, applied in one transaction.
+-- Single-file migration: every schema in one transaction. Idempotent — safe to re-apply.
 --
 -- protorm — https://github.com/the-protobuf-project/protorm
 
@@ -19,7 +19,7 @@ CREATE SCHEMA IF NOT EXISTS "embedded_v1";
 -- never matters — even across schemas or reference cycles).
 
 -- Event exercises nested-message normalization: a singular message field becomes a belongs-to relation, a repeated message field becomes a has-many, while well-known and map fields stay scalar / JSONB.
-CREATE TABLE "embedded_v1"."events" (
+CREATE TABLE IF NOT EXISTS "embedded_v1"."events" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.
@@ -37,7 +37,7 @@ CREATE TABLE "embedded_v1"."events" (
 );
 
 -- Attendee carries an IDENTIFIER, so that field is its primary key.
-CREATE TABLE "embedded_v1"."attendees" (
+CREATE TABLE IF NOT EXISTS "embedded_v1"."attendees" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Resource name; the AIP identifier.
@@ -49,7 +49,7 @@ CREATE TABLE "embedded_v1"."attendees" (
 );
 
 -- Location is reachable from Event and so becomes its own table; its existing `id` field is promoted to the primary key.
-CREATE TABLE "embedded_v1"."locations" (
+CREATE TABLE IF NOT EXISTS "embedded_v1"."locations" (
     -- Unique identifier for the location, assigned by the server.
     "id"  VARCHAR(255)  NOT NULL  PRIMARY KEY,
     -- City where the location resides.
@@ -59,7 +59,7 @@ CREATE TABLE "embedded_v1"."locations" (
 );
 
 -- Metadata is reachable only through Event.metadata and carries no resource annotation, yet it still becomes its own table (with a synthesized primary key) rather than an inlined JSONB blob.
-CREATE TABLE "embedded_v1"."metadatas" (
+CREATE TABLE IF NOT EXISTS "embedded_v1"."metadatas" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Free-form source system label.
@@ -71,7 +71,7 @@ CREATE TABLE "embedded_v1"."metadatas" (
 );
 
 -- Join table for the many-to-many relation Event.attendees ↔ Attendee.
-CREATE TABLE "embedded_v1"."event_attendees" (
+CREATE TABLE IF NOT EXISTS "embedded_v1"."event_attendees" (
     -- Unique identifier for the record.
     "id"  CHAR(26)  NOT NULL  PRIMARY KEY,
     -- Foreign key to Event.
@@ -81,22 +81,29 @@ CREATE TABLE "embedded_v1"."event_attendees" (
 );
 
 -- Foreign keys
+ALTER TABLE "embedded_v1"."events" DROP CONSTRAINT IF EXISTS "fk_events_location_id";
 ALTER TABLE "embedded_v1"."events" ADD CONSTRAINT "fk_events_location_id" FOREIGN KEY ("location_id") REFERENCES "embedded_v1"."locations"("id") ON DELETE CASCADE;
+ALTER TABLE "embedded_v1"."events" DROP CONSTRAINT IF EXISTS "fk_events_billing_id";
 ALTER TABLE "embedded_v1"."events" ADD CONSTRAINT "fk_events_billing_id" FOREIGN KEY ("billing_id") REFERENCES "embedded_v1"."locations"("id") ON DELETE SET NULL;
+ALTER TABLE "embedded_v1"."events" DROP CONSTRAINT IF EXISTS "fk_events_metadata_id";
 ALTER TABLE "embedded_v1"."events" ADD CONSTRAINT "fk_events_metadata_id" FOREIGN KEY ("metadata_id") REFERENCES "embedded_v1"."metadatas"("id") ON DELETE SET NULL;
+ALTER TABLE "embedded_v1"."attendees" DROP CONSTRAINT IF EXISTS "fk_attendees_event_id";
 ALTER TABLE "embedded_v1"."attendees" ADD CONSTRAINT "fk_attendees_event_id" FOREIGN KEY ("event_id") REFERENCES "embedded_v1"."events"("id") ON DELETE CASCADE;
+ALTER TABLE "embedded_v1"."metadatas" DROP CONSTRAINT IF EXISTS "fk_metadatas_owner";
 ALTER TABLE "embedded_v1"."metadatas" ADD CONSTRAINT "fk_metadatas_owner" FOREIGN KEY ("owner") REFERENCES "embedded_v1"."attendees"("id");
+ALTER TABLE "embedded_v1"."event_attendees" DROP CONSTRAINT IF EXISTS "fk_event_attendees_event_id";
 ALTER TABLE "embedded_v1"."event_attendees" ADD CONSTRAINT "fk_event_attendees_event_id" FOREIGN KEY ("event_id") REFERENCES "embedded_v1"."events"("id") ON DELETE CASCADE;
+ALTER TABLE "embedded_v1"."event_attendees" DROP CONSTRAINT IF EXISTS "fk_event_attendees_attendee_id";
 ALTER TABLE "embedded_v1"."event_attendees" ADD CONSTRAINT "fk_event_attendees_attendee_id" FOREIGN KEY ("attendee_id") REFERENCES "embedded_v1"."attendees"("id") ON DELETE CASCADE;
 
 -- Indexes
-CREATE INDEX "idx_events_location_id" ON "embedded_v1"."events" ("location_id");
-CREATE INDEX "idx_events_billing_id" ON "embedded_v1"."events" ("billing_id");
-CREATE INDEX "idx_events_metadata_id" ON "embedded_v1"."events" ("metadata_id");
-CREATE INDEX "idx_attendees_event_id" ON "embedded_v1"."attendees" ("event_id");
-CREATE INDEX "idx_metadatas_owner" ON "embedded_v1"."metadatas" ("owner");
-CREATE UNIQUE INDEX "idx_event_attendees_event_id_attendee_id" ON "embedded_v1"."event_attendees" ("event_id", "attendee_id");
-CREATE INDEX "idx_event_attendees_attendee_id" ON "embedded_v1"."event_attendees" ("attendee_id");
+CREATE INDEX IF NOT EXISTS "idx_events_location_id" ON "embedded_v1"."events" ("location_id");
+CREATE INDEX IF NOT EXISTS "idx_events_billing_id" ON "embedded_v1"."events" ("billing_id");
+CREATE INDEX IF NOT EXISTS "idx_events_metadata_id" ON "embedded_v1"."events" ("metadata_id");
+CREATE INDEX IF NOT EXISTS "idx_attendees_event_id" ON "embedded_v1"."attendees" ("event_id");
+CREATE INDEX IF NOT EXISTS "idx_metadatas_owner" ON "embedded_v1"."metadatas" ("owner");
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_event_attendees_event_id_attendee_id" ON "embedded_v1"."event_attendees" ("event_id", "attendee_id");
+CREATE INDEX IF NOT EXISTS "idx_event_attendees_attendee_id" ON "embedded_v1"."event_attendees" ("attendee_id");
 
 -- Documentation
 COMMENT ON TABLE "embedded_v1"."events" IS 'Event exercises nested-message normalization: a singular message field becomes a belongs-to relation, a repeated message field becomes a has-many, while well-known and map fields stay scalar / JSONB.';
