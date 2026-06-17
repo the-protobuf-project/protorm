@@ -163,7 +163,7 @@ func DatasourceName(dbName string) string {
 	if name == "" {
 		return "db"
 	}
-	if c := name[0]; !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+	if c := name[0]; (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') {
 		return "db_" + name
 	}
 	return name
