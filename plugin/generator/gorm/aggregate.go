@@ -52,9 +52,11 @@ func aggregateView(db *schema.Database) map[string]any {
 			Schema:        strings.Join(schemaNames, ", "),
 			Notes:         []string{"Migration aggregator: every model in one factory Registry."},
 		}),
-		"Package":  naming.GoPackage(db.Name),
-		"Database": db.Name,
-		"Imports":  imports,
-		"Models":   models,
+		"Package":     naming.GoPackage(db.Name),
+		"Database":    db.Name,
+		"Imports":     imports,
+		"Models":      models,
+		"OTel":        db.OTel,
+		"OTelMetrics": db.OTelMetrics,
 	}
 }

@@ -7,3 +7,8 @@ datasources:
   - match: "store.apps.**"
     database: users
     schema: "{leaf}_app"   # calendar_app (leaf segment, version dropped)
+
+# Tune the gorm OpenTelemetry helper: keep it on (the opt default) but emit
+# spans only, no metrics — exercises the tracing.WithoutMetrics() default path.
+otel:
+  metrics: false

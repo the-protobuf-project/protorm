@@ -18,6 +18,9 @@ package fleet
 
 import (
 	fleettrackingdevice "example.com/test/gen/fleet/fleettrackingdevice"
+
+	"gorm.io/gorm"
+	"gorm.io/plugin/opentelemetry/tracing"
 )
 
 // Migrator is the subset of *gorm.DB the registry needs. *gorm.DB already
@@ -61,3 +64,20 @@ func (r *Registry) Migrate(db Migrator) error {
 var Default = New().Register(
 	&fleettrackingdevice.Tracker{},
 )
+
+// Instrument installs the OpenTelemetry GORM plugin on db, so every query the
+// application runs emits an OpenTelemetry span. Call it once at
+// startup, after opening the connection and before serving traffic:
+//
+//	if err := fleet.Default.Instrument(db); err != nil {
+//		log.Fatal(err)
+//	}
+//
+// Pass extra tracing.Option values to customize at the call site, e.g.
+// tracing.WithAttributes(...) or tracing.WithoutQueryVariables().
+func (*Registry) Instrument(db *gorm.DB, opts ...tracing.Option) error {
+	defaults := []tracing.Option{
+		tracing.WithoutMetrics(),
+	}
+	return db.Use(tracing.NewPlugin(append(defaults, opts...)...))
+}

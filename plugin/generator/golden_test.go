@@ -53,9 +53,16 @@ func runCase(t *testing.T, dir string) {
 		configPath = filepath.Join(dir, "protorm.yaml")
 	}
 
+	// A case may ship an empty "stores" marker file to enable the gorm target's
+	// opt-in per-resource store generation (other targets ignore the flag).
+	stores := false
+	if _, err := os.Stat(filepath.Join(dir, "stores")); err == nil {
+		stores = true
+	}
+
 	for _, target := range caseTargets(t, dir) {
 		t.Run(target, func(t *testing.T) {
-			files := runTarget(t, req, configPath, target)
+			files := runTarget(t, req, configPath, target, stores)
 			goldenDir := filepath.Join(dir, "golden", target)
 
 			if *update {
@@ -69,7 +76,7 @@ func runCase(t *testing.T, dir string) {
 
 // runTarget executes one backend through the real plugin entry point and
 // returns the generated files as path → content.
-func runTarget(t *testing.T, req *pluginpb.CodeGeneratorRequest, configPath, target string) map[string]string {
+func runTarget(t *testing.T, req *pluginpb.CodeGeneratorRequest, configPath, target string, stores bool) map[string]string {
 	t.Helper()
 
 	p, err := protogen.Options{}.New(req)
@@ -77,8 +84,10 @@ func runTarget(t *testing.T, req *pluginpb.CodeGeneratorRequest, configPath, tar
 		t.Fatalf("protogen: %v", err)
 	}
 	// GoModule mirrors the go_module plugin opt so the gorm target emits its
-	// migration aggregator; other targets ignore it.
-	opts := Options{Target: target, ConfigPath: configPath, GoModule: "example.com/test/gen"}
+	// migration aggregator; other targets ignore it. Stores mirrors the stores
+	// opt (gorm-only per-resource store generation). OTel mirrors the otel opt's
+	// default (on); a case's protorm.yaml otel: block can override it.
+	opts := Options{Target: target, ConfigPath: configPath, GoModule: "example.com/test/gen", Stores: stores, OTel: true}
 	if err := Generate(p, opts); err != nil {
 		t.Fatalf("generate %s: %v", target, err)
 	}

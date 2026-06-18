@@ -52,6 +52,17 @@ type Options struct {
 	// config=<path> plugin option) mapping proto packages to databases/schemas.
 	// Empty means no config: package-path defaults apply.
 	ConfigPath string
+
+	// Stores, when true, makes the gorm target additionally emit a typed CRUD
+	// store per resource (one file per model). It introduces a gorm.io/gorm
+	// dependency in each generated models package, so it is opt-in; other targets
+	// ignore it. From the stores plugin option.
+	Stores bool
+
+	// OTel, when true, folds an OpenTelemetry tracing helper into the gorm
+	// migration Registry. On by default (otel plugin opt); a protorm.yaml otel:
+	// block can override it. Other targets ignore it.
+	OTel bool
 }
 
 // registry maps target names to their backend implementations.
@@ -99,11 +110,26 @@ func Generate(p *protogen.Plugin, opts Options) error {
 		return err
 	}
 
+	// OTel defaults to the plugin opt; a protorm.yaml otel: block overrides both
+	// the enabled switch and the metrics toggle when set.
+	otelOn, otelMetrics := opts.OTel, true
+	if layout != nil && layout.OTel != nil {
+		if layout.OTel.Enabled != nil {
+			otelOn = *layout.OTel.Enabled
+		}
+		if layout.OTel.Metrics != nil {
+			otelMetrics = *layout.OTel.Metrics
+		}
+	}
+
 	protoc := protocVersion(p)
 	for _, db := range dbs {
 		db.PluginVersion = opts.Version
 		db.ProtocVersion = protoc
 		db.GoModule = opts.GoModule
+		db.Stores = opts.Stores
+		db.OTel = otelOn
+		db.OTelMetrics = otelMetrics
 	}
 
 	return target.Generate(p, dbs)

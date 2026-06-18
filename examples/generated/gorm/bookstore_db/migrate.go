@@ -19,6 +19,9 @@ package bookstoredb
 import (
 	bookstorev1 "github.com/the-protobuf-project/protorm/examples/generated/gorm/bookstore_db/bookstorev1"
 	inventory "github.com/the-protobuf-project/protorm/examples/generated/gorm/bookstore_db/inventory"
+
+	"gorm.io/gorm"
+	"gorm.io/plugin/opentelemetry/tracing"
 )
 
 // Migrator is the subset of *gorm.DB the registry needs. *gorm.DB already
@@ -64,3 +67,18 @@ var Default = New().Register(
 	&bookstorev1.Book{},
 	&inventory.Shelf{},
 )
+
+// Instrument installs the OpenTelemetry GORM plugin on db, so every query the
+// application runs emits an OpenTelemetry span (and metric). Call it once at
+// startup, after opening the connection and before serving traffic:
+//
+//	if err := bookstoredb.Default.Instrument(db); err != nil {
+//		log.Fatal(err)
+//	}
+//
+// Pass extra tracing.Option values to customize at the call site, e.g.
+// tracing.WithAttributes(...) or tracing.WithoutQueryVariables().
+func (*Registry) Instrument(db *gorm.DB, opts ...tracing.Option) error {
+	defaults := []tracing.Option{}
+	return db.Use(tracing.NewPlugin(append(defaults, opts...)...))
+}

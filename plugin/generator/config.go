@@ -33,6 +33,22 @@ type layoutConfig struct {
 	// table is renamed to a generic word ("resource", then "entity"/…). Only the
 	// generated table name changes; proto/model names are untouched. See destutter.go.
 	DedupeSchemaTable bool `yaml:"dedupe_schema_table"`
+
+	// OTel tunes the gorm target's OpenTelemetry tracing helper (folded into the
+	// migration Registry as Instrument). Nil leaves the otel plugin opt in charge.
+	OTel *otelConfig `yaml:"otel"`
+}
+
+// otelConfig is the protorm.yaml `otel:` block. Both fields are pointers so an
+// unset key inherits the plugin-opt default rather than the Go zero value.
+type otelConfig struct {
+	// Enabled overrides the otel plugin opt: set false to omit the tracing helper
+	// even when the opt defaults it on, or true to force it on.
+	Enabled *bool `yaml:"enabled"`
+	// Metrics, when explicitly false, bakes tracing.WithoutMetrics() into the
+	// generated Instrument default so the plugin emits spans but no metrics.
+	// Defaults to true (tracing + metrics).
+	Metrics *bool `yaml:"metrics"`
 }
 
 // matchRule assigns every proto package matching Match to a database and schema.
