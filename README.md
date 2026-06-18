@@ -47,7 +47,7 @@ three backends from one source of truth.
 | Target | Output | Notes |
 | --- | --- | --- |
 | **prisma** | A complete, runnable Prisma 7 project | multi-file schema, `package.json`, `tsconfig.json`, config, `.env.example` |
-| **gorm** | Go structs with GORM tags + a migration registry | one package per schema, pointer types for nullables, relation fields, a `migrate.go` factory `Registry` |
+| **gorm** | Go structs with GORM tags + a migration registry | one package per schema, pointer types for nullables, relation fields, a `migrate.go` factory `Registry`; optional [per-resource CRUD stores and OpenTelemetry tracing](#gorm-stores-and-tracing) |
 | **sql** | PostgreSQL DDL | per-schema reference files **and** a single transactional, **idempotent** `migrate.sql` (safe to re-apply); FK constraints, indexes, `updated_at` triggers, `COMMENT ON` |
 
 Every target also emits a `README.md` with a Mermaid ER diagram and a per-model
@@ -286,8 +286,10 @@ generated/prisma/bookstore_db/
 ├── bookstore_v1/bookstore.postgres.prisma # models & enums, one file per source proto
 └── inventory/inventory.postgres.prisma    # (a second file, merged datasource)
 
-generated/gorm/bookstore_db/bookstorev1/models.go   # package = folder name
-generated/gorm/bookstore_db/migrate.go              # factory Registry (needs go_module)
+generated/gorm/bookstore_db/bookstorev1/models.go        # package = folder name
+generated/gorm/bookstore_db/bookstorev1/author_store.go  # typed CRUD store (stores opt)
+generated/gorm/bookstore_db/bookstorev1/store_options.go # shared ListOptions (stores opt)
+generated/gorm/bookstore_db/migrate.go              # factory Registry + Instrument (needs go_module)
 generated/gorm/bookstore_db/README.md               # ER diagram + model reference
 generated/sql/bookstore_db/migrate.sql              # whole DB, one transactional file
 generated/sql/bookstore_db/bookstore_v1.postgres.sql
@@ -316,6 +318,46 @@ if err := bookstoredb.Default.Migrate(db); err != nil { // db is your *gorm.DB
 }
 bookstoredb.Default.Register(&MyModel{})  // add your own to the same registry
 ```
+
+### GORM stores and tracing
+
+Two opt-in extras layer onto the gorm target's runtime:
+
+**Stores** (`stores` opt) generate a typed CRUD store per resource — one small
+`<model>_store.go` file each, sharing a `store_options.go` in the same package —
+so you don't hand-write the boilerplate. Each store is derived entirely from the
+resource's schema (PK, unique columns, foreign keys):
+
+```go
+store := bookstorev1.NewAuthorStore(db)
+
+a, err := store.GetByID(ctx, id)                 // primary key
+a, err = store.GetByName(ctx, "authors/rowling") // a UNIQUE column → GetBy<Col>
+list, err := store.List(ctx, bookstorev1.ListOptions{Limit: 20, OrderBy: "display_name"})
+n, err := store.Count(ctx, bookstorev1.ListOptions{})
+books, err := bookstorev1.NewBookStore(db).
+    ListByAuthorID(ctx, a.ID, bookstorev1.ListOptions{}) // a foreign key → ListBy<FK>
+```
+
+Every store exposes `Create`, `GetByID`, `List`, `Count`, `Update`, `DeleteByID`,
+plus `GetBy<Col>` finders for unique columns and `ListBy<FK>` finders for foreign
+keys. `ListOptions` carries `Limit` / `Offset` / `OrderBy` / `Where` (+ `Args`).
+Enabling `stores` adds a `gorm.io/gorm` dependency to the models package.
+
+**Tracing** (`otel` opt, **on by default**) folds an OpenTelemetry helper into the
+migration `Registry`. Call it once at startup, after `Migrate`:
+
+```go
+if err := bookstoredb.Default.Instrument(db); err != nil { // db.Use(tracing.NewPlugin(...))
+    log.Fatal(err)
+}
+// configure at the call site:
+bookstoredb.Default.Instrument(db, tracing.WithAttributes(attribute.String("svc", "api")))
+```
+
+It needs `go_module` (the helper lives in the aggregator) and adds the
+`gorm.io/plugin/opentelemetry` dependency. Set `otel=false` to omit it, or tune
+the generated default — including spans-only via [`protorm.yaml` `otel:`](#top-level-keys).
 
 The **sql** target emits one transactional `migrate.sql` you can apply in a
 single shot — foreign keys are deferred to `ALTER` statements (so creation order
@@ -392,6 +434,11 @@ A complete config showing every key:
 strip_version: true           # flatten the API version out of derived schema names
 dedupe_schema_table: true     # strip a redundant schema word from stuttering table names
 
+# gorm OpenTelemetry tracing helper (gorm target; see the otel plugin opt)
+otel:
+  enabled: true               # override the otel opt's master switch
+  metrics: false              # spans only — bakes tracing.WithoutMetrics() into the default
+
 # datasource rules (first match wins)
 datasources:
   - match: "fleet.**"         # dotted package glob; trailing ** matches any suffix
@@ -411,6 +458,7 @@ datasources:
 | `datasources` | list | Ordered list of [match rules](#datasource-rules). The **first** rule whose `match` matches a package wins. |
 | `strip_version` | bool | Drop a trailing API version from derived schema names — `bookstore.v1` → schema `bookstore` instead of `bookstore_v1`. Applies to resource-type-derived and config-derived schema names, **never** to an explicit `(protorm.v1.datasource).schema` annotation. A per-rule `strip_version` overrides this default. |
 | `dedupe_schema_table` | bool | Rename a table whose name would stutter with its schema in a schema-qualified identifier (`booking` schema + `bookings` table → `bookingBookings` in tools that join schema+table, e.g. Hasura). The redundant leading schema word is stripped; for the schema's primary table — where stripping leaves nothing — the table is renamed to a generic word (`resource`, then `entity`, …). Only the generated table name changes; proto/model names are untouched. |
+| `otel` | map | **gorm only.** Tune the OpenTelemetry tracing helper folded into the migration registry (see the [`otel` plugin opt](#plugin-options)). `enabled` (bool) overrides the opt's master switch — set `false` to omit `Instrument` even when the opt defaults it on. `metrics` (bool, default `true`) — set `false` to emit spans only, baking `tracing.WithoutMetrics()` into the generated default. |
 
 ### Datasource rules
 
@@ -486,6 +534,8 @@ Passed via `opt:` in `buf.gen.yaml`.
 | --- | --- |
 | `target` | Output backend: `prisma` \| `gorm` \| `sql`. Required. |
 | `go_module` | **gorm only.** Go import path of the output directory (e.g. `github.com/me/gen`). Enables the `migrate.go` factory registry, whose package imports each per-schema models package. Omit it and the per-schema model packages still generate, just without the aggregator. |
+| `stores` | **gorm only.** Also emit a typed CRUD store per resource — one `<model>_store.go` file each (see [GORM stores](#gorm-stores-and-tracing)). Off by default; turning it on adds a `gorm.io/gorm` dependency to each models package. |
+| `otel` | **gorm only.** Fold an OpenTelemetry tracing helper (`Registry.Instrument`) into the migration registry. **On by default**; takes effect with `go_module`, and adds the `gorm.io/plugin/opentelemetry` dependency. Set `otel=false` to omit it, or tune it via `protorm.yaml` `otel:`. |
 | `strict` | Per-rule severity for schema problems. `""` (default) warns on everything; `true` makes every rule a hard error; a spec like `ref:error,collision:warn,index:error,lint:warn` sets severity per rule. Rules: **ref** (unresolved/dropped references), **collision** (global name qualification), **index** (index names an unknown column), **lint** (validate-on-generate advisories). |
 | `config` | Path to a [`protorm.yaml`](#configuration--protormyaml) layout config. |
 | `M<proto>=<import>` | Go import-path mapping for a proto file, required when protos omit `option go_package`. |

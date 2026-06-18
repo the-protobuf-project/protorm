@@ -7,8 +7,15 @@
 package {{.Package}}
 
 import (
-{{range .Imports}}	{{.Alias}} "{{.Path}}"
-{{end}})
+{{- range .Imports}}
+	{{.Alias}} "{{.Path}}"
+{{- end}}
+{{- if .OTel}}
+
+	"gorm.io/gorm"
+	"gorm.io/plugin/opentelemetry/tracing"
+{{- end}}
+)
 
 // Migrator is the subset of *gorm.DB the registry needs. *gorm.DB already
 // satisfies it, so this package depends on no external module.
@@ -51,3 +58,24 @@ func (r *Registry) Migrate(db Migrator) error {
 var Default = New().Register(
 {{range .Models}}	&{{.}}{},
 {{end}})
+{{- if .OTel}}
+
+// Instrument installs the OpenTelemetry GORM plugin on db, so every query the
+// application runs emits an OpenTelemetry span{{if .OTelMetrics}} (and metric){{end}}. Call it once at
+// startup, after opening the connection and before serving traffic:
+//
+//	if err := {{.Package}}.Default.Instrument(db); err != nil {
+//		log.Fatal(err)
+//	}
+//
+// Pass extra tracing.Option values to customize at the call site, e.g.
+// tracing.WithAttributes(...) or tracing.WithoutQueryVariables().
+func (*Registry) Instrument(db *gorm.DB, opts ...tracing.Option) error {
+	defaults := []tracing.Option{
+{{- if not .OTelMetrics}}
+		tracing.WithoutMetrics(),
+{{- end}}
+	}
+	return db.Use(tracing.NewPlugin(append(defaults, opts...)...))
+}
+{{- end}}

@@ -28,6 +28,9 @@ plugins:
       # go_module is the import path of the gorm out: directory, so the generated
       # migration aggregator can import each per-schema models package.
       - go_module=github.com/the-protobuf-project/protorm/examples/generated/gorm
+      # stores emits a typed CRUD store per resource (one <model>_store.go file);
+      # it adds a gorm.io/gorm dependency to each generated models package.
+      - stores=true
       - Mbookstore/v1/bookstore.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
       - Mbookstore/v1/inventory.proto=github.com/the-protobuf-project/protorm/examples/gen/bookstore/v1
 

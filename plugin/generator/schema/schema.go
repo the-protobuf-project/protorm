@@ -46,6 +46,23 @@ type Database struct {
 	// target joins it with the database/schema dirs to import each per-schema
 	// models package from the generated migration aggregator. Empty when unset.
 	GoModule string
+
+	// Stores, when true, makes the gorm target emit a typed CRUD store per
+	// resource alongside the models. From the stores plugin opt; other targets
+	// ignore it. Off by default so the generated models package stays
+	// dependency-free.
+	Stores bool
+
+	// OTel, when true, folds an OpenTelemetry tracing helper (Instrument) into the
+	// gorm migration Registry. On by default (from the otel plugin opt /
+	// protorm.yaml); takes effect only when GoModule is set, since the Registry
+	// lives in the aggregator. Adds gorm.io/gorm + the otel tracing plugin deps.
+	OTel bool
+
+	// OTelMetrics controls whether the generated Instrument emits metrics in
+	// addition to spans. False bakes tracing.WithoutMetrics() into the default.
+	// Defaults to true. Only meaningful when OTel is set.
+	OTelMetrics bool
 }
 
 // Schema groups tables that share a namespace. Maps to a PostgreSQL schema.

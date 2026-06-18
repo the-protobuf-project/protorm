@@ -96,6 +96,17 @@ func main() {
 		"Go import path of the output directory (e.g. github.com/me/gen); the gorm "+
 			"target needs it to generate the migration aggregator that imports each schema package",
 	)
+	stores := flags.Bool(
+		"stores", false,
+		"gorm target only: also generate a typed CRUD store per resource "+
+			"(introduces a gorm.io/gorm dependency in each models package)",
+	)
+	otel := flags.Bool(
+		"otel", true,
+		"gorm target only: fold an OpenTelemetry tracing helper into the migration "+
+			"Registry (Instrument); on by default, takes effect with go_module. "+
+			"Set otel=false to omit it. protorm.yaml otel: tunes it further",
+	)
 
 	protogen.Options{
 		ParamFunc: flags.Set,
@@ -112,6 +123,8 @@ func main() {
 			Version:    ver,
 			ConfigPath: *config,
 			GoModule:   *goModule,
+			Stores:     *stores,
+			OTel:       *otel,
 		})
 	})
 }
