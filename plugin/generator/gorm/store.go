@@ -7,18 +7,26 @@ package gorm
 // delete-by-id) plus typed finders (GetBy<Col> for unique columns, ListBy<FK>
 // for foreign keys) — derived generically from each resource, no per-proto code.
 //
-// Stores share the models package (so they reference the model types directly
-// with no import-path requirement) but are emitted as one file per model to keep
-// each file small. Opt-in via the stores plugin opt: it introduces a
-// gorm.io/gorm dependency the dependency-free models package otherwise avoids.
+// Stores live in the models package (referencing the model types directly) but
+// are emitted one file per model to keep each small, and import the shared gormx
+// runtime (ListOptions, the generic Store interface) by its <go_module>/gormx
+// path — so the stores opt now also requires the go_module opt. Opt-in via the
+// stores plugin opt: it introduces a gorm.io/gorm dependency.
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/the-protobuf-project/protorm/plugin/generator/header"
 	"github.com/the-protobuf-project/protorm/plugin/generator/naming"
 	"github.com/the-protobuf-project/protorm/plugin/generator/schema"
 )
+
+// gormxImportPath is the import path of the shared gormx runtime package, emitted
+// at <go_module>/gormx. Stores import its ListOptions and Store interface.
+func gormxImportPath(db *schema.Database) string {
+	return db.GoModule + "/gormx"
+}
 
 // finderView is one typed finder method: GetBy<Col> for a unique column or
 // ListBy<Col> for a foreign-key column.
@@ -28,12 +36,20 @@ type finderView struct {
 	ArgType string // Go type of the lookup argument (never a pointer)
 }
 
-// storeOptionsView assembles the data for the shared store_options.go file: just
-// the banner and package name. The ListOptions type and apply helper are static.
-func storeOptionsView(db *schema.Database, s *schema.Schema, pkg string) map[string]any {
+// gormxView assembles the data for the shared gormx runtime package, emitted
+// once at <go_module>/gormx. db supplies the version banner; the type/interface
+// bodies are static.
+func gormxView(db *schema.Database) map[string]any {
 	return map[string]any{
-		"Header":  storeHeader(db, s),
-		"Package": pkg,
+		"Header": header.Render("//", header.Info{
+			PluginVersion: db.PluginVersion,
+			ProtocVersion: db.ProtocVersion,
+			Database:      db.Name,
+			SchemaLabel:   "package",
+			Schema:        gormxPkg,
+			Notes:         []string{"Shared GORM runtime: ListOptions, the generic Store interface, the GenericStore engine, and EnsureSchemas."},
+		}),
+		"Package": gormxPkg,
 	}
 }
 
@@ -42,7 +58,10 @@ func storeModelView(db *schema.Database, s *schema.Schema, pkg string, t *schema
 	var unique, fks []finderView
 	var pkArgType string
 	hasPK := false
+	uniqueCols := map[string]bool{} // columns already given a GetBy finder
+	colByName := map[string]*schema.Column{}
 	for _, col := range t.Columns {
+		colByName[col.Name] = col
 		if col.Name == t.PKColumn {
 			hasPK = true
 			pkArgType = baseGoType(col)
@@ -53,6 +72,7 @@ func storeModelView(db *schema.Database, s *schema.Schema, pkg string, t *schema
 				Column:  col.Name,
 				ArgType: baseGoType(col),
 			})
+			uniqueCols[col.Name] = true
 		}
 		if col.FKModel != "" {
 			fks = append(fks, finderView{
@@ -62,17 +82,45 @@ func storeModelView(db *schema.Database, s *schema.Schema, pkg string, t *schema
 			})
 		}
 	}
+	// A column made unique via a single-column unique index gets a finder too —
+	// table-level uniqueness is as good a lookup key as column.unique (e.g. a
+	// `code` column declared in protorm.v1.table.indexes). Deduped against the
+	// column.unique finders above; the PK is covered by GetByID.
+	for _, idx := range t.Indexes {
+		if !idx.Unique || len(idx.Columns) != 1 {
+			continue
+		}
+		name := idx.Columns[0]
+		col := colByName[name]
+		if col == nil || uniqueCols[name] || name == t.PKColumn {
+			continue
+		}
+		unique = append(unique, finderView{
+			Method:  "GetBy" + gormFieldName(col),
+			Column:  col.Name,
+			ArgType: baseGoType(col),
+		})
+		uniqueCols[name] = true
+	}
+
+	// Stores import the shared gormx runtime (ListOptions, Store) alongside gorm.
+	third := []string{gormxImportPath(db), "gorm.io/gorm"}
+	sort.Strings(third)
 
 	return map[string]any{
-		"Header":        storeHeader(db, s),
-		"Package":       pkg,
-		"Comment":       commentOr(t.Comment, t.LocalName+" model."),
-		"Name":          t.LocalName,
-		"Store":         t.LocalName + "Store",
-		"TableName":     s.Name + "." + t.Name,
-		"HasPK":         hasPK,
-		"PKColumn":      t.PKColumn,
-		"PKArgType":     pkArgType,
+		"Header":    storeHeader(db, s),
+		"Package":   pkg,
+		"Imports":   importBlock([]string{"context"}, third),
+		"Comment":   commentOr(t.Comment, t.LocalName+" model."),
+		"Name":      t.LocalName,
+		"Store":     t.LocalName + "Store",
+		"TableName": s.Name + "." + t.Name,
+		"HasPK":     hasPK,
+		"PKColumn":  t.PKColumn,
+		"PKArgType": pkArgType,
+		// The generic gormx.Store fixes id as a string, so only string-PK stores
+		// (protorm's ULID/UUID default) can assert they satisfy it.
+		"AssertStore":   hasPK && pkArgType == "string",
 		"UniqueFinders": unique,
 		"FKFinders":     fks,
 	}

@@ -166,6 +166,7 @@ func (ctx *buildCtx) materialize(db *schema.Database, schemaName string, msg *pr
 		SourceProto:  srcPath,
 		SourceDir:    protoDirNoVersion(srcPath),
 		PgSchema:     schemaName,
+		ValueObject:  true, // materialized from an embedded message, not a resource
 	}
 	// Append before populating columns so a self/cyclic reference finds the table.
 	s.Tables = append(s.Tables, t)

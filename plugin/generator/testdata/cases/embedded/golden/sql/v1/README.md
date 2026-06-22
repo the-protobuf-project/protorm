@@ -109,3 +109,4 @@ Join table for the many-to-many relation Event.attendees ↔ Attendee.
 | `id` | `CHAR(26)` | not null |
 | `event_id` | `CHAR(26)` | not null |
 | `attendee_id` | `CHAR(26)` | not null |
+| `attendee_name` | `TEXT` | not null |

@@ -51,6 +51,19 @@ type Table struct {
 	// file contribute models to several schemas (per-table @@schema override).
 	PgSchema string
 
+	// ValueObject marks a table materialized from an embedded message-typed field
+	// (a relationalized value object like Money or PostalAddress) rather than a
+	// google.api.resource. Such tables are leaves — nothing points back through
+	// them — so the GORM target can safely emit a cross-schema belongs-to
+	// association to one (and import its package) without risking an import cycle.
+	ValueObject bool
+
+	// Parents lists the parent resource variable names from the AIP resource
+	// pattern ("users/{user}/events/{event}" → ["user"]), set by materializeParents.
+	// Non-empty marks a nested resource, so an M2M join to it can capture the full
+	// hierarchical key, not just the leaf id.
+	Parents []string
+
 	Columns     []*Column
 	Indexes     []*Index
 	ForeignKeys []*ForeignKey

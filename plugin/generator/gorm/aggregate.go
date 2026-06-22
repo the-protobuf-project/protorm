@@ -56,6 +56,7 @@ func aggregateView(db *schema.Database) map[string]any {
 		"Database":    db.Name,
 		"Imports":     imports,
 		"Models":      models,
+		"Schemas":     schemaNames,
 		"OTel":        db.OTel,
 		"OTelMetrics": db.OTelMetrics,
 	}

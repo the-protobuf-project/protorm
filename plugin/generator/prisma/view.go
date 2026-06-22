@@ -30,9 +30,10 @@ func fragmentView(db *schema.Database, g fragmentGroup, provider types.Provider)
 	for _, e := range g.enums {
 		enums = append(enums, withFallbackComments(e))
 	}
+	dsName := naming.DatasourceName(db.Name)
 	models := make([]modelView, 0, len(g.tables))
 	for _, t := range g.tables {
-		models = append(models, modelViewOf(t, provider))
+		models = append(models, modelViewOf(t, provider, dsName))
 	}
 	srcProto := g.sourceProto
 	if srcProto == "" {
@@ -75,7 +76,8 @@ func fragmentSchemas(g fragmentGroup) []string {
 }
 
 // modelViewOf renders one table into template-ready field and index lines.
-func modelViewOf(t *schema.Table, provider types.Provider) modelView {
+// dsName is the Prisma datasource block name, used to prefix native-type attributes.
+func modelViewOf(t *schema.Table, provider types.Provider, dsName string) modelView {
 	fkByCol := map[string]*schema.ForeignKey{}
 	for _, fk := range t.ForeignKeys {
 		fkByCol[fk.Column] = fk
@@ -93,7 +95,7 @@ func modelViewOf(t *schema.Table, provider types.Provider) modelView {
 	}
 
 	for _, col := range t.Columns {
-		m.Fields = append(m.Fields, fieldLine{Doc: fieldDoc(col), Decl: fieldDecl(col, provider)})
+		m.Fields = append(m.Fields, fieldLine{Doc: fieldDoc(col), Decl: fieldDecl(col, provider, dsName)})
 
 		// BelongsTo relation — emitted immediately after the FK column. The field
 		// name is derived from the FK column (minus _id) so two FKs to the same

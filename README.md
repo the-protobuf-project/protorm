@@ -288,8 +288,8 @@ generated/prisma/bookstore_db/
 
 generated/gorm/bookstore_db/bookstorev1/models.go        # package = folder name
 generated/gorm/bookstore_db/bookstorev1/author_store.go  # typed CRUD store (stores opt)
-generated/gorm/bookstore_db/bookstorev1/store_options.go # shared ListOptions (stores opt)
-generated/gorm/bookstore_db/migrate.go              # factory Registry + Instrument (needs go_module)
+generated/gorm/gormx/gormx.go                       # shared runtime: ListOptions, Store[M], engine (stores opt)
+generated/gorm/bookstore_db/migrate.go              # factory Registry + EnsureSchemas + Instrument (needs go_module)
 generated/gorm/bookstore_db/README.md               # ER diagram + model reference
 generated/sql/bookstore_db/migrate.sql              # whole DB, one transactional file
 generated/sql/bookstore_db/bookstore_v1.postgres.sql
@@ -313,6 +313,9 @@ register your own models alongside the generated ones:
 ```go
 import bookstoredb "github.com/me/gen/bookstore_db"
 
+if err := bookstoredb.Default.EnsureSchemas(db); err != nil { // create Postgres schemas first
+    log.Fatal(err)
+}
 if err := bookstoredb.Default.Migrate(db); err != nil { // db is your *gorm.DB
     log.Fatal(err)
 }
@@ -323,26 +326,29 @@ bookstoredb.Default.Register(&MyModel{})  // add your own to the same registry
 
 Two opt-in extras layer onto the gorm target's runtime:
 
-**Stores** (`stores` opt) generate a typed CRUD store per resource — one small
-`<model>_store.go` file each, sharing a `store_options.go` in the same package —
-so you don't hand-write the boilerplate. Each store is derived entirely from the
-resource's schema (PK, unique columns, foreign keys):
+**Stores** (`stores` opt, also needs `go_module`) generate a typed CRUD store per
+resource — one small `<model>_store.go` file each — plus a shared `gormx` runtime
+package they all import, so you don't hand-write the boilerplate. Each store is
+derived entirely from the resource's schema (PK, unique columns, foreign keys):
 
 ```go
 store := bookstorev1.NewAuthorStore(db)
 
 a, err := store.GetByID(ctx, id)                 // primary key
 a, err = store.GetByName(ctx, "authors/rowling") // a UNIQUE column → GetBy<Col>
-list, err := store.List(ctx, bookstorev1.ListOptions{Limit: 20, OrderBy: "display_name"})
-n, err := store.Count(ctx, bookstorev1.ListOptions{})
+list, err := store.List(ctx, gormx.ListOptions{Limit: 20, OrderBy: "display_name"})
+n, err := store.Count(ctx, gormx.ListOptions{})
 books, err := bookstorev1.NewBookStore(db).
-    ListByAuthorID(ctx, a.ID, bookstorev1.ListOptions{}) // a foreign key → ListBy<FK>
+    ListByAuthorID(ctx, a.ID, gormx.ListOptions{}) // a foreign key → ListBy<FK>
 ```
 
 Every store exposes `Create`, `GetByID`, `List`, `Count`, `Update`, `DeleteByID`,
-plus `GetBy<Col>` finders for unique columns and `ListBy<FK>` finders for foreign
-keys. `ListOptions` carries `Limit` / `Offset` / `OrderBy` / `Where` (+ `Args`).
-Enabling `stores` adds a `gorm.io/gorm` dependency to the models package.
+plus `GetBy<Col>` finders for unique columns (including single-column unique
+indexes) and `ListBy<FK>` finders for foreign keys. The shared `gormx` package
+holds `ListOptions` (`Limit` / `Offset` / `OrderBy` / `Where` + `Args`), a generic
+`Store[M]` interface every store satisfies, and a `GenericStore[M]` engine that
+runs CRUD for any model — so one engine can drive every entity. Enabling `stores`
+adds a `gorm.io/gorm` dependency to the models package.
 
 **Tracing** (`otel` opt, **on by default**) folds an OpenTelemetry helper into the
 migration `Registry`. Call it once at startup, after `Migrate`:

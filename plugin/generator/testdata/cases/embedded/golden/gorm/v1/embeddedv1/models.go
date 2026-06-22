@@ -14,6 +14,8 @@ package embeddedv1
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // Event exercises nested-message normalization: a singular message field becomes a belongs-to relation, a repeated message field becomes a has-many, while well-known and map fields stay scalar / JSONB.
@@ -23,9 +25,9 @@ type Event struct {
 	// Resource name; the AIP identifier.
 	Name string `gorm:"column:name;not null;uniqueIndex" json:"name" validate:"required"`
 	// Well-known type stays a scalar column, not a relation.
-	CreateTime time.Time `gorm:"column:create_time;not null;autoCreateTime" json:"create_time"`
+	CreateTime time.Time `gorm:"column:create_time;type:timestamptz;not null;autoCreateTime" json:"create_time"`
 	// Map fields stay JSONB.
-	Labels json.RawMessage `gorm:"column:labels" json:"labels,omitempty"`
+	Labels json.RawMessage `gorm:"column:labels;type:jsonb" json:"labels,omitempty"`
 	// Foreign key to Location.
 	LocationID string    `gorm:"column:location_id;not null;index:idx_events_location_id" json:"location_id" validate:"required"`
 	Location   *Location `gorm:"foreignKey:LocationID;constraint:OnDelete:CASCADE" json:"location,omitempty"`
@@ -85,7 +87,7 @@ type Metadata struct {
 	// Free-form source system label.
 	Source *string `gorm:"column:source" json:"source,omitempty"`
 	// Arbitrary tags.
-	Tags []string `gorm:"column:tags" json:"tags,omitempty"`
+	Tags pq.StringArray `gorm:"column:tags;type:text[]" json:"tags,omitempty"`
 	// Singular resource reference → belongs-to with a bare-named FK column (`owner`, no `_id`). Its auto-index must name the scalar field `ownerID`, not the `owner` relation field, or Prisma rejects the @@index.
 	OwnerID *string   `gorm:"column:owner;index:idx_metadatas_owner" json:"owner,omitempty"`
 	Owner   *Attendee `gorm:"foreignKey:OwnerID" json:"owner,omitempty"`
@@ -105,6 +107,8 @@ type EventAttendees struct {
 	// Foreign key to Attendee.
 	AttendeeID string    `gorm:"column:attendee_id;not null;uniqueIndex:idx_event_attendees_event_id_attendee_id,priority:2;index:idx_event_attendees_attendee_id" json:"attendee_id" validate:"required"`
 	Attendee   *Attendee `gorm:"foreignKey:AttendeeID;constraint:OnDelete:CASCADE" json:"attendee,omitempty"`
+	// Full resource name of the referenced Attendee, capturing the parent hierarchy the attendee_id id alone omits.
+	AttendeeName string `gorm:"column:attendee_name;not null" json:"attendee_name" validate:"required"`
 }
 
 func (*EventAttendees) TableName() string { return "embedded_v1.event_attendees" }

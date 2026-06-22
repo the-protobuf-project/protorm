@@ -33,6 +33,10 @@ func materializeParents(t *schema.Table, res *annotations.ResourceDescriptor) {
 		if collection == "" || variable == "" {
 			continue
 		}
+		// Record the parent regardless of whether its FK column already exists, so a
+		// nested resource stays recognizable downstream (an M2M join to it captures
+		// the full hierarchical key, not just the leaf id).
+		t.Parents = append(t.Parents, variable)
 		col := variable + "_id"
 		if hasColumn(t, col) {
 			continue

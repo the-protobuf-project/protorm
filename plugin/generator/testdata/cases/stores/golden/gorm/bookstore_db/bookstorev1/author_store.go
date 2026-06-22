@@ -14,12 +14,17 @@ package bookstorev1
 import (
 	"context"
 
+	"example.com/test/gen/gormx"
 	"gorm.io/gorm"
 )
 
 // AuthorStore provides typed CRUD access to Author records.
 // Author is a top-level resource. Inferred table: bookstore_v1.authors. id: ID_STRATEGY_ULID synthesizes a generated `id` PK and demotes the AIP resource name to a UNIQUE lookup column; timestamps adds created_at/updated_at.
 type AuthorStore struct{ DB *gorm.DB }
+
+// Compile-time proof that AuthorStore satisfies the generic gormx.Store, so the
+// generic engine can drive it alongside the typed finders below.
+var _ gormx.Store[Author] = (*AuthorStore)(nil)
 
 // NewAuthorStore returns a AuthorStore backed by db.
 func NewAuthorStore(db *gorm.DB) *AuthorStore { return &AuthorStore{DB: db} }
@@ -30,9 +35,9 @@ func (s *AuthorStore) Create(ctx context.Context, m *Author) error {
 }
 
 // List returns the Author records matching opts.
-func (s *AuthorStore) List(ctx context.Context, opts ListOptions) ([]Author, error) {
+func (s *AuthorStore) List(ctx context.Context, opts gormx.ListOptions) ([]Author, error) {
 	var out []Author
-	if err := opts.apply(s.DB.WithContext(ctx)).Find(&out).Error; err != nil {
+	if err := opts.Apply(s.DB.WithContext(ctx)).Find(&out).Error; err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -40,7 +45,7 @@ func (s *AuthorStore) List(ctx context.Context, opts ListOptions) ([]Author, err
 
 // Count returns the number of Author records matching opts.Where
 // (pagination and ordering are ignored).
-func (s *AuthorStore) Count(ctx context.Context, opts ListOptions) (int64, error) {
+func (s *AuthorStore) Count(ctx context.Context, opts gormx.ListOptions) (int64, error) {
 	db := s.DB.WithContext(ctx).Model(&Author{})
 	if opts.Where != nil {
 		db = db.Where(opts.Where, opts.Args...)

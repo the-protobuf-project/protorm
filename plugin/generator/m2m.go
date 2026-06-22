@@ -75,6 +75,20 @@ func (ctx *buildCtx) buildJoinTable(req *m2mReq, child *schema.Table) {
 	// both cascade on delete (an explicit on_delete on the field overrides).
 	addFKColumn(join, parentCol, parent.ModelName, parent.ProtoMessage, true, embedAction(req.onDelete, true), req.onUpdate)
 	addFKColumn(join, childCol, child.ModelName, child.ProtoMessage, true, embedAction(req.onDelete, true), req.onUpdate)
+	// When the child is a nested resource, the leaf id alone can't reconstruct its
+	// full name (resources/{resource}/offerings/{offering} loses the {resource}
+	// parent). Capture the full resource name in a sibling column so callers can
+	// round-trip it without overloading the id.
+	if len(child.Parents) > 0 {
+		nameCol := naming.SnakeCase(child.ModelName) + "_name"
+		join.Columns = append(join.Columns, &schema.Column{
+			Name: nameCol,
+			Comment: "Full resource name of the referenced " + child.ModelName +
+				", capturing the parent hierarchy the " + childCol + " id alone omits.",
+			SQLType: "TEXT",
+			NotNull: true,
+		})
+	}
 	// A unique composite index makes the pair the logical key (the surrogate id
 	// added by ensurePK is just a convenient single-column PK for the ORM).
 	join.Indexes = append(join.Indexes, &schema.Index{

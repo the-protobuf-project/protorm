@@ -24,13 +24,13 @@ model Document {
   title String @map("title")
 
   /// create_time is set by the server on creation (AIP-148).
-  createTime DateTime @default(now()) @map("create_time")
+  createTime DateTime @default(now()) @v1.Timestamptz(6) @map("create_time")
 
   /// update_time is maintained by the server on every write (AIP-148).
-  updateTime DateTime @updatedAt @map("update_time")
+  updateTime DateTime @updatedAt @v1.Timestamptz(6) @map("update_time")
 
   /// delete_time marks a soft-deleted row when set (AIP-164).
-  deleteTime DateTime? @map("delete_time")
+  deleteTime DateTime? @v1.Timestamptz(6) @map("delete_time")
 
   /// Composite index on [delete_time].
   @@index([deleteTime])

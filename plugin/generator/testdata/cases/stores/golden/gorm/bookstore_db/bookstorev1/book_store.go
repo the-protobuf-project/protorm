@@ -14,12 +14,17 @@ package bookstorev1
 import (
 	"context"
 
+	"example.com/test/gen/gormx"
 	"gorm.io/gorm"
 )
 
 // BookStore provides typed CRUD access to Book records.
 // Book is a resource nested under Author. Inferred table: bookstore_v1.books.
 type BookStore struct{ DB *gorm.DB }
+
+// Compile-time proof that BookStore satisfies the generic gormx.Store, so the
+// generic engine can drive it alongside the typed finders below.
+var _ gormx.Store[Book] = (*BookStore)(nil)
 
 // NewBookStore returns a BookStore backed by db.
 func NewBookStore(db *gorm.DB) *BookStore { return &BookStore{DB: db} }
@@ -30,9 +35,9 @@ func (s *BookStore) Create(ctx context.Context, m *Book) error {
 }
 
 // List returns the Book records matching opts.
-func (s *BookStore) List(ctx context.Context, opts ListOptions) ([]Book, error) {
+func (s *BookStore) List(ctx context.Context, opts gormx.ListOptions) ([]Book, error) {
 	var out []Book
-	if err := opts.apply(s.DB.WithContext(ctx)).Find(&out).Error; err != nil {
+	if err := opts.Apply(s.DB.WithContext(ctx)).Find(&out).Error; err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -40,7 +45,7 @@ func (s *BookStore) List(ctx context.Context, opts ListOptions) ([]Book, error) 
 
 // Count returns the number of Book records matching opts.Where
 // (pagination and ordering are ignored).
-func (s *BookStore) Count(ctx context.Context, opts ListOptions) (int64, error) {
+func (s *BookStore) Count(ctx context.Context, opts gormx.ListOptions) (int64, error) {
 	db := s.DB.WithContext(ctx).Model(&Book{})
 	if opts.Where != nil {
 		db = db.Where(opts.Where, opts.Args...)
@@ -90,9 +95,9 @@ func (s *BookStore) GetByISBN(ctx context.Context, v string) (*Book, error) {
 }
 
 // ListByAuthorID returns the Book records whose author_id matches id, with opts applied.
-func (s *BookStore) ListByAuthorID(ctx context.Context, id string, opts ListOptions) ([]Book, error) {
+func (s *BookStore) ListByAuthorID(ctx context.Context, id string, opts gormx.ListOptions) ([]Book, error) {
 	var out []Book
-	q := opts.apply(s.DB.WithContext(ctx).Where("author_id = ?", id))
+	q := opts.Apply(s.DB.WithContext(ctx).Where("author_id = ?", id))
 	if err := q.Find(&out).Error; err != nil {
 		return nil, err
 	}

@@ -137,6 +137,73 @@ func GoType(pgType string) string {
 	return t
 }
 
+// pqArrayType maps an array's element keyword to the github.com/lib/pq array
+// type GORM needs: a bare Go slice (`[]string`) fails AutoMigrate with
+// "unsupported data type", so a repeated scalar is rendered as the pq.*Array
+// type that implements sql.Scanner/driver.Valuer. Element kinds without a
+// dedicated pq type fall back to pq.StringArray (see GormGoType).
+var pqArrayType = map[string]string{
+	"BOOLEAN": "pq.BoolArray", "BOOL": "pq.BoolArray",
+	"SMALLINT": "pq.Int32Array", "INT2": "pq.Int32Array", "INTEGER": "pq.Int32Array", "INT": "pq.Int32Array", "INT4": "pq.Int32Array", "SERIAL": "pq.Int32Array",
+	"BIGINT": "pq.Int64Array", "INT8": "pq.Int64Array", "BIGSERIAL": "pq.Int64Array",
+	"REAL": "pq.Float32Array", "FLOAT4": "pq.Float32Array",
+	"DOUBLE PRECISION": "pq.Float64Array", "FLOAT8": "pq.Float64Array",
+	"BYTEA": "pq.ByteaArray",
+}
+
+// GormGoType is GoType specialized for the GORM target: a repeated scalar maps
+// to its github.com/lib/pq array type instead of a bare Go slice, because GORM's
+// AutoMigrate cannot map a bare `[]string`/`[]int32`. Non-array types are
+// identical to GoType. Callers detect the resulting "pq." prefix to add the
+// lib/pq import.
+func GormGoType(pgType string) string {
+	if base, isArray := BaseType(pgType); isArray {
+		if t, ok := pqArrayType[base]; ok {
+			return t
+		}
+		return "pq.StringArray" // text[] and any unmapped element kind
+	}
+	return GoType(pgType)
+}
+
+// gormColumnType maps a scalar PostgreSQL keyword to the explicit GORM `type:`
+// tag value needed when GORM's Go-type default disagrees with the canonical
+// column type: time.Time defaults to timestamptz (so a TIMESTAMP/DATE/TIME loses
+// its kind), and json.RawMessage ([]byte) defaults to bytea (clashing with the
+// Prisma/SQL jsonb). Keywords absent here need no override.
+var gormColumnType = map[string]string{
+	"TIMESTAMPTZ": "timestamptz", "TIMESTAMP": "timestamp",
+	"DATE": "date", "TIME": "time", "TIMETZ": "timetz",
+	"JSONB": "jsonb", "JSON": "json",
+}
+
+// gormArrayColumnType maps an array element keyword to the GORM `type:` array
+// value. String-ish elements default to text[] so GORM matches Prisma's
+// String[] → text[] mapping.
+var gormArrayColumnType = map[string]string{
+	"BOOLEAN": "boolean[]", "BOOL": "boolean[]",
+	"SMALLINT": "smallint[]", "INT2": "smallint[]", "INTEGER": "integer[]", "INT": "integer[]", "INT4": "integer[]", "SERIAL": "integer[]",
+	"BIGINT": "bigint[]", "INT8": "bigint[]", "BIGSERIAL": "bigint[]",
+	"REAL": "real[]", "FLOAT4": "real[]",
+	"DOUBLE PRECISION": "double precision[]", "FLOAT8": "double precision[]",
+	"BYTEA": "bytea[]",
+}
+
+// GormColumnType returns the explicit value for a GORM `type:` struct-tag
+// fragment, or "" when GORM's Go-type default already matches the canonical
+// column type. It keeps the three backends agreeing on timestamptz, jsonb, and
+// native arrays so AutoMigrate doesn't fight a Prisma-created column.
+func GormColumnType(pgType string) string {
+	base, isArray := BaseType(pgType)
+	if isArray {
+		if t, ok := gormArrayColumnType[base]; ok {
+			return t
+		}
+		return "text[]"
+	}
+	return gormColumnType[base]
+}
+
 // prismaScalar maps a bare PostgreSQL keyword to a Prisma scalar type.
 // Types Prisma cannot model natively map to String.
 var prismaScalar = map[string]string{
@@ -163,6 +230,27 @@ func PrismaType(pgType string) string {
 		return t + "[]"
 	}
 	return t
+}
+
+// prismaNativeType maps a date/time keyword to the bare Prisma native-type
+// (without the datasource prefix). Prisma's DateTime defaults to `timestamp(3)`
+// (no time zone), so a TIMESTAMPTZ field silently loses its zone — a UTC write
+// reads back as a local-wall-clock value. Pinning Timestamptz(6) keeps Prisma
+// agreeing with the GORM/SQL columns. Only the date/time family needs an
+// override: Json already maps to jsonb and String[] to text[] by default.
+var prismaNativeType = map[string]string{
+	"TIMESTAMPTZ": "Timestamptz(6)", "TIMESTAMP": "Timestamp(6)",
+	"DATE": "Date", "TIME": "Time(6)", "TIMETZ": "Timetz(6)",
+}
+
+// PrismaNativeType returns the bare Prisma native-type name (e.g.
+// "Timestamptz(6)") for a canonical PostgreSQL type, or "" when Prisma's default
+// mapping already matches. The caller prefixes it with the datasource block name
+// to form the attribute (@<datasource>.Timestamptz(6)). Postgres-only; Mongo has
+// no native-type attributes.
+func PrismaNativeType(pgType string) string {
+	base, _ := BaseType(pgType)
+	return prismaNativeType[base]
 }
 
 // BaseType splits a SQL type into its leading keyword and whether it is an

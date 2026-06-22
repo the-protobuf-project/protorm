@@ -36,7 +36,7 @@ model Sink {
   blob Bytes? @map("blob")
 
   /// Timestamp → TIMESTAMPTZ.
-  eventTime DateTime? @map("event_time")
+  eventTime DateTime? @wkt_db.Timestamptz(6) @map("event_time")
 
   /// Duration → INTERVAL.
   window String? @map("window")

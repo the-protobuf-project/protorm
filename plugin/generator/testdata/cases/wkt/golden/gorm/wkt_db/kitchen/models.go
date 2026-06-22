@@ -14,6 +14,8 @@ package kitchen
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // Sink is one table holding every interesting type mapping.
@@ -35,7 +37,7 @@ type Sink struct {
 	// bytes → BYTEA.
 	Blob []byte `gorm:"column:blob" json:"blob,omitempty"`
 	// Timestamp → TIMESTAMPTZ.
-	EventTime *time.Time `gorm:"column:event_time" json:"event_time,omitempty"`
+	EventTime *time.Time `gorm:"column:event_time;type:timestamptz" json:"event_time,omitempty"`
 	// Duration → INTERVAL.
 	Window *string `gorm:"column:window" json:"window,omitempty"`
 	// FieldMask → TEXT.
@@ -45,11 +47,11 @@ type Sink struct {
 	// String wrapper → VARCHAR(255).
 	MaybeLabel *string `gorm:"column:maybe_label" json:"maybe_label,omitempty"`
 	// repeated string → VARCHAR(255)[].
-	Tags []string `gorm:"column:tags" json:"tags,omitempty"`
+	Tags pq.StringArray `gorm:"column:tags;type:text[]" json:"tags,omitempty"`
 	// repeated int32 → INTEGER[].
-	Scores []int32 `gorm:"column:scores" json:"scores,omitempty"`
+	Scores pq.Int32Array `gorm:"column:scores;type:integer[]" json:"scores,omitempty"`
 	// map → JSONB.
-	Attributes json.RawMessage `gorm:"column:attributes" json:"attributes,omitempty"`
+	Attributes json.RawMessage `gorm:"column:attributes;type:jsonb" json:"attributes,omitempty"`
 }
 
 func (*Sink) TableName() string { return "kitchen.sinks" }

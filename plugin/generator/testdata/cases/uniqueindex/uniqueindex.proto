@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+// Package promo.v1 exercises store finder generation for a column made unique
+// via a single-column unique index (protorm.v1.table.indexes), rather than
+// column.unique — protorm must still emit a GetBy<Field> finder for it.
+package promo.v1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "protorm/v1/annotations.proto";
+
+option (protorm.v1.datasource) = {
+  database: "promo_db"
+  schema: "promo"
+};
+
+// PromoCode is a redeemable promotion. The human-facing `code` is unique via a
+// single-column unique index, so protorm emits GetByCode alongside GetByID and
+// the GetByName finder for the AIP resource name.
+message PromoCode {
+  option (google.api.resource) = {
+    type: "promo.v1/PromoCode"
+    pattern: "promoCodes/{promo_code}"
+    singular: "promoCode"
+    plural: "promoCodes"
+  };
+  option (protorm.v1.table) = {
+    indexes: [
+      {
+        columns: ["code"]
+        unique: true
+      }
+    ]
+  };
+
+  // name: AIP resource name → UNIQUE lookup column (id is the synthesized PK).
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // code is the redeemable token; unique via the table-level index above.
+  string code = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // description is free-form, nullable.
+  string description = 3;
+}

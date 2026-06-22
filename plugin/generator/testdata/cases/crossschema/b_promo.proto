@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+// Package shop.v1, promo schema: a Coupon resource that embeds the shared Money
+// value object defined in the ordering schema. Money already lives in the
+// ordering schema, so this is a cross-schema value-object reference. The GORM
+// target emits a belongs-to association (Coupon.AmountOff *ordering.Money) — safe
+// because a value object is a leaf — so the generic engine can Preload it instead
+// of hydrating Money by hand.
+package shop.v1;
+
+import "a_ordering.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "protorm/v1/annotations.proto";
+
+option (protorm.v1.datasource) = {
+  database: "shop_db"
+  schema: "promo"
+};
+
+// Coupon is a resource in the promo schema referencing Money cross-schema.
+message Coupon {
+  option (google.api.resource) = {
+    type: "shop.v1/Coupon"
+    pattern: "coupons/{coupon}"
+    singular: "coupon"
+    plural: "coupons"
+  };
+
+  // name: AIP resource name → UNIQUE lookup column (id is the synthesized PK).
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // amount_off embeds the shared Money, which lives in the ordering schema.
+  Money amount_off = 2;
+}

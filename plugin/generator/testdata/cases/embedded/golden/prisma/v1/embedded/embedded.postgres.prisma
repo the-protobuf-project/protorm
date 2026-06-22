@@ -18,7 +18,7 @@ model Event {
   name String @unique @map("name")
 
   /// Well-known type stays a scalar column, not a relation.
-  createTime DateTime @default(now()) @map("create_time")
+  createTime DateTime @default(now()) @v1.Timestamptz(6) @map("create_time")
 
   /// Map fields stay JSONB.
   labels Json? @map("labels")
@@ -157,6 +157,9 @@ model EventAttendees {
 
   /// Relation to Attendee via attendee_id.
   attendee Attendee @relation(fields: [attendeeID], references: [id], onDelete: Cascade)
+
+  /// Full resource name of the referenced Attendee, capturing the parent hierarchy the attendee_id id alone omits.
+  attendeeName String @map("attendee_name")
 
   /// Unique constraint on [event_id, attendee_id].
   @@unique([eventID, attendeeID])

@@ -14,12 +14,17 @@ package inventory
 import (
 	"context"
 
+	"example.com/test/gen/gormx"
 	"gorm.io/gorm"
 )
 
 // ShelfStore provides typed CRUD access to Shelf records.
 // Shelf groups books physically. The resource's `plural` fixes the irregular plural ("shelfs" → "shelves") — no table name override needed.
 type ShelfStore struct{ DB *gorm.DB }
+
+// Compile-time proof that ShelfStore satisfies the generic gormx.Store, so the
+// generic engine can drive it alongside the typed finders below.
+var _ gormx.Store[Shelf] = (*ShelfStore)(nil)
 
 // NewShelfStore returns a ShelfStore backed by db.
 func NewShelfStore(db *gorm.DB) *ShelfStore { return &ShelfStore{DB: db} }
@@ -30,9 +35,9 @@ func (s *ShelfStore) Create(ctx context.Context, m *Shelf) error {
 }
 
 // List returns the Shelf records matching opts.
-func (s *ShelfStore) List(ctx context.Context, opts ListOptions) ([]Shelf, error) {
+func (s *ShelfStore) List(ctx context.Context, opts gormx.ListOptions) ([]Shelf, error) {
 	var out []Shelf
-	if err := opts.apply(s.DB.WithContext(ctx)).Find(&out).Error; err != nil {
+	if err := opts.Apply(s.DB.WithContext(ctx)).Find(&out).Error; err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -40,7 +45,7 @@ func (s *ShelfStore) List(ctx context.Context, opts ListOptions) ([]Shelf, error
 
 // Count returns the number of Shelf records matching opts.Where
 // (pagination and ordering are ignored).
-func (s *ShelfStore) Count(ctx context.Context, opts ListOptions) (int64, error) {
+func (s *ShelfStore) Count(ctx context.Context, opts gormx.ListOptions) (int64, error) {
 	db := s.DB.WithContext(ctx).Model(&Shelf{})
 	if opts.Where != nil {
 		db = db.Where(opts.Where, opts.Args...)

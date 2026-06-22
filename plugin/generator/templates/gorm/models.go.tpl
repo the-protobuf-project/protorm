@@ -2,11 +2,7 @@
 
 package {{.Package}}
 {{if .Imports}}
-import (
-{{- range .Imports}}
-	"{{.}}"
-{{- end}}
-)
+{{.Imports}}
 {{end}}
 {{- range .Enums}}
 // {{.Comment}}

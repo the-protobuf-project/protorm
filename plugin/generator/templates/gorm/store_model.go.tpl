@@ -2,15 +2,17 @@
 
 package {{.Package}}
 
-import (
-	"context"
-
-	"gorm.io/gorm"
-)
+{{.Imports}}
 
 // {{.Store}} provides typed CRUD access to {{.Name}} records.
 // {{.Comment}}
 type {{.Store}} struct{ DB *gorm.DB }
+{{- if .AssertStore}}
+
+// Compile-time proof that {{.Store}} satisfies the generic gormx.Store, so the
+// generic engine can drive it alongside the typed finders below.
+var _ gormx.Store[{{.Name}}] = (*{{.Store}})(nil)
+{{- end}}
 
 // New{{.Store}} returns a {{.Store}} backed by db.
 func New{{.Store}}(db *gorm.DB) *{{.Store}} { return &{{.Store}}{DB: db} }
@@ -21,9 +23,9 @@ func (s *{{.Store}}) Create(ctx context.Context, m *{{.Name}}) error {
 }
 
 // List returns the {{.Name}} records matching opts.
-func (s *{{.Store}}) List(ctx context.Context, opts ListOptions) ([]{{.Name}}, error) {
+func (s *{{.Store}}) List(ctx context.Context, opts gormx.ListOptions) ([]{{.Name}}, error) {
 	var out []{{.Name}}
-	if err := opts.apply(s.DB.WithContext(ctx)).Find(&out).Error; err != nil {
+	if err := opts.Apply(s.DB.WithContext(ctx)).Find(&out).Error; err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -31,7 +33,7 @@ func (s *{{.Store}}) List(ctx context.Context, opts ListOptions) ([]{{.Name}}, e
 
 // Count returns the number of {{.Name}} records matching opts.Where
 // (pagination and ordering are ignored).
-func (s *{{.Store}}) Count(ctx context.Context, opts ListOptions) (int64, error) {
+func (s *{{.Store}}) Count(ctx context.Context, opts gormx.ListOptions) (int64, error) {
 	db := s.DB.WithContext(ctx).Model(&{{.Name}}{})
 	if opts.Where != nil {
 		db = db.Where(opts.Where, opts.Args...)
@@ -74,9 +76,9 @@ func (s *{{$.Store}}) {{.Method}}(ctx context.Context, v {{.ArgType}}) (*{{$.Nam
 {{end}}
 {{- range .FKFinders}}
 // {{.Method}} returns the {{$.Name}} records whose {{.Column}} matches id, with opts applied.
-func (s *{{$.Store}}) {{.Method}}(ctx context.Context, id {{.ArgType}}, opts ListOptions) ([]{{$.Name}}, error) {
+func (s *{{$.Store}}) {{.Method}}(ctx context.Context, id {{.ArgType}}, opts gormx.ListOptions) ([]{{$.Name}}, error) {
 	var out []{{$.Name}}
-	q := opts.apply(s.DB.WithContext(ctx).Where("{{.Column}} = ?", id))
+	q := opts.Apply(s.DB.WithContext(ctx).Where("{{.Column}} = ?", id))
 	if err := q.Find(&out).Error; err != nil {
 		return nil, err
 	}

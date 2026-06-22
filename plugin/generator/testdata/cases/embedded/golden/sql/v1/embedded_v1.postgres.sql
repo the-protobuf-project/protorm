@@ -81,6 +81,8 @@ CREATE TABLE "embedded_v1"."event_attendees" (
     "event_id"  CHAR(26)  NOT NULL,
     -- Foreign key to Attendee.
     "attendee_id"  CHAR(26)  NOT NULL,
+    -- Full resource name of the referenced Attendee, capturing the parent hierarchy the attendee_id id alone omits.
+    "attendee_name"  TEXT  NOT NULL,
     CONSTRAINT "fk_event_attendees_event_id" FOREIGN KEY ("event_id") REFERENCES "embedded_v1"."events"("id") ON DELETE CASCADE,
     CONSTRAINT "fk_event_attendees_attendee_id" FOREIGN KEY ("attendee_id") REFERENCES "embedded_v1"."attendees"("id") ON DELETE CASCADE
 );
@@ -115,3 +117,4 @@ COMMENT ON TABLE "embedded_v1"."event_attendees" IS 'Join table for the many-to-
 COMMENT ON COLUMN "embedded_v1"."event_attendees"."id" IS 'Unique identifier for the record.';
 COMMENT ON COLUMN "embedded_v1"."event_attendees"."event_id" IS 'Foreign key to Event.';
 COMMENT ON COLUMN "embedded_v1"."event_attendees"."attendee_id" IS 'Foreign key to Attendee.';
+COMMENT ON COLUMN "embedded_v1"."event_attendees"."attendee_name" IS 'Full resource name of the referenced Attendee, capturing the parent hierarchy the attendee_id id alone omits.';

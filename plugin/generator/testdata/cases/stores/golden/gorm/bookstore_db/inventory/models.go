@@ -26,9 +26,9 @@ type Shelf struct {
 	// capacity is the number of books the shelf holds; nullable INTEGER.
 	Capacity *int32 `gorm:"column:capacity" json:"capacity,omitempty"`
 	// Timestamp when the record was created.
-	CreatedAt time.Time `gorm:"column:created_at;not null;autoCreateTime" json:"created_at"`
+	CreatedAt time.Time `gorm:"column:created_at;type:timestamptz;not null;autoCreateTime" json:"created_at"`
 	// Timestamp when the record was last updated.
-	UpdatedAt time.Time `gorm:"column:updated_at;not null;autoUpdateTime" json:"updated_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at;type:timestamptz;not null;autoUpdateTime" json:"updated_at"`
 }
 
 func (*Shelf) TableName() string { return "inventory.shelves" }

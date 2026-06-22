@@ -23,10 +23,17 @@ import (
 	"gorm.io/plugin/opentelemetry/tracing"
 )
 
-// Migrator is the subset of *gorm.DB the registry needs. *gorm.DB already
-// satisfies it, so this package depends on no external module.
+// Migrator is the subset of *gorm.DB the Migrate call needs; *gorm.DB satisfies
+// it. EnsureSchemas and Instrument take a concrete *gorm.DB, since creating
+// schemas and installing plugins need the full driver.
 type Migrator interface {
 	AutoMigrate(models ...any) error
+}
+
+// schemas lists every Postgres schema the registered models live in, so
+// EnsureSchemas can create them before AutoMigrate builds schema-qualified tables.
+var schemas = []string{
+	"oneof_v1",
 }
 
 // Registry collects GORM models so they migrate together.
@@ -49,6 +56,25 @@ func (r *Registry) Models() []any { return r.models }
 // Migrate runs AutoMigrate for every registered model.
 func (r *Registry) Migrate(db Migrator) error {
 	return db.AutoMigrate(r.models...)
+}
+
+// EnsureSchemas creates every Postgres schema the registered models live in, if
+// it does not already exist. AutoMigrate does not create schemas, so call this
+// before Migrate when models map to schema-qualified tables:
+//
+//	if err := v1.Default.EnsureSchemas(db); err != nil {
+//		log.Fatal(err)
+//	}
+//	if err := v1.Default.Migrate(db); err != nil {
+//		log.Fatal(err)
+//	}
+func (*Registry) EnsureSchemas(db *gorm.DB) error {
+	for _, name := range schemas {
+		if err := db.Exec(`CREATE SCHEMA IF NOT EXISTS "` + name + `"`).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Default holds every model generated for the v1 database. Attach it

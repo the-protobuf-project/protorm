@@ -133,6 +133,68 @@ func TestGoType(t *testing.T) {
 	}
 }
 
+func TestGormGoType(t *testing.T) {
+	cases := map[string]string{
+		"VARCHAR(255)":       "string",         // scalar: same as GoType
+		"VARCHAR(255)[]":     "pq.StringArray", // repeated scalar → pq array, not a bare slice
+		"TEXT[]":             "pq.StringArray",
+		"INTEGER[]":          "pq.Int32Array",
+		"BIGINT[]":           "pq.Int64Array",
+		"DOUBLE PRECISION[]": "pq.Float64Array",
+		"REAL[]":             "pq.Float32Array",
+		"BOOLEAN[]":          "pq.BoolArray",
+		"NUMERIC(20,0)[]":    "pq.StringArray", // unmapped element → StringArray fallback
+		"TIMESTAMPTZ":        "time.Time",
+		"JSONB":              "json.RawMessage",
+	}
+	for in, want := range cases {
+		if got := GormGoType(in); got != want {
+			t.Errorf("GormGoType(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestGormColumnType(t *testing.T) {
+	cases := map[string]string{
+		"TIMESTAMPTZ":     "timestamptz", // GORM's time.Time default loses the kind
+		"TIMESTAMP":       "timestamp",
+		"DATE":            "date",
+		"JSONB":           "jsonb", // GORM's []byte default would be bytea
+		"JSON":            "json",
+		"VARCHAR(255)[]":  "text[]", // matches Prisma's String[] → text[]
+		"TEXT[]":          "text[]",
+		"INTEGER[]":       "integer[]",
+		"BIGINT[]":        "bigint[]",
+		"NUMERIC(20,0)[]": "text[]", // unmapped element → text[] fallback
+		"VARCHAR(255)":    "",       // scalar string: GORM default is fine
+		"INTEGER":         "",       // scalar int: GORM default is fine
+		"CHAR(26)":        "",       // FK/ULID column: no override
+	}
+	for in, want := range cases {
+		if got := GormColumnType(in); got != want {
+			t.Errorf("GormColumnType(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestPrismaNativeType(t *testing.T) {
+	cases := map[string]string{
+		"TIMESTAMPTZ":   "Timestamptz(6)", // bare; caller adds the @<datasource> prefix
+		"TIMESTAMP":     "Timestamp(6)",
+		"DATE":          "Date",
+		"TIME":          "Time(6)",
+		"TIMESTAMPTZ[]": "Timestamptz(6)", // element keyword drives it
+		"VARCHAR(255)":  "",               // String needs no native type
+		"JSONB":         "",               // Json already maps to jsonb
+		"INTEGER":       "",
+	}
+	for in, want := range cases {
+		if got := PrismaNativeType(in); got != want {
+			t.Errorf("PrismaNativeType(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestPrismaType(t *testing.T) {
 	cases := map[string]string{
 		"VARCHAR(255)":     "String",

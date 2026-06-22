@@ -4,6 +4,7 @@ package gorm
 // enum consts, and conditional imports. The template is presentation only.
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/the-protobuf-project/protorm/plugin/generator/header"
@@ -28,21 +29,22 @@ type enumView struct {
 // packageView assembles the template data for one schema package.
 func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]any {
 	var models []modelView
-	needTime, needJSON := false, false
+	needTime, needJSON, needPQ := false, false, false
 
 	// Go packages are per-schema, so structs use the bare LocalName. Related
 	// models (FK / has-many targets) carry the globally-qualified ModelName,
 	// which loc translates back to the local name they're declared under.
 	loc := localNameFunc(db)
 	// inThisSchema reports whether a model is declared in the schema being
-	// rendered. Association struct fields (BelongsTo / HasMany) reference the
-	// related Go type directly, so they can only be emitted for same-package
-	// (same-schema) targets. Cross-schema relations would need an import — and
-	// since references can be cyclic (identity ↔ organisation), importing would
-	// create an import cycle — so those association fields are omitted. The
-	// scalar FK column is kept, and the DB-level relation still appears in the
-	// Prisma and SQL targets.
+	// rendered. Same-package targets get a direct association field. A cross-schema
+	// target would need importing another package, which risks an import cycle, so
+	// it is normally omitted — except a value object (a leaf table nothing points
+	// back through), which is safe to import so the generic engine can Preload it
+	// (see the cross-schema branch below). The scalar FK column is always kept.
 	inThisSchema := modelSchemaSet(db, s.Name)
+	tableByModel := tableByModelFunc(db)
+	voEdges := crossSchemaVOEdges(db)
+	assocImports := map[string]bool{} // cross-schema value-object packages to import
 
 	for _, t := range s.Tables {
 		m := modelView{
@@ -61,6 +63,7 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 			gt := goType(col)
 			needTime = needTime || strings.Contains(gt, "time.Time")
 			needJSON = needJSON || strings.Contains(gt, "json.RawMessage")
+			needPQ = needPQ || strings.HasPrefix(gt, "pq.")
 
 			goField := gormFieldName(col)
 			extra := idxTags[col.Name]
@@ -76,7 +79,6 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 			// BelongsTo association: emitted alongside the FK column. The field is
 			// named after the FK column (minus _id) so multiple references to the
 			// same model stay distinct; GORM resolves the link via foreignKey.
-			// Skipped for cross-schema targets (see inThisSchema).
 			if col.FKModel != "" && inThisSchema(col.FKModel) {
 				assoc := uniqueGoName(naming.PascalGo(naming.StripIDSuffix(col.Name)), used)
 				m.Fields = append(m.Fields, fieldView{
@@ -84,6 +86,19 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 						" `gorm:\"foreignKey:" + goField + constraintTag(t, col.Name) +
 						"\" json:\"" + strings.ToLower(assoc) + ",omitempty\"`",
 				})
+			} else if tgt := tableByModel(col.FKModel); col.FKModel != "" && tgt != nil &&
+				tgt.ValueObject && db.GoModule != "" && emitCrossAssoc(s.Name, tgt.PgSchema, voEdges) {
+				// Cross-schema belongs-to to a value object: a leaf table, so importing
+				// its package can't form a cycle. Emitting the association lets the
+				// generic engine Preload it instead of hydrating Money/Address by hand.
+				tgtPkg := naming.GoPackage(tgt.PgSchema)
+				assoc := uniqueGoName(naming.PascalGo(naming.StripIDSuffix(col.Name)), used)
+				m.Fields = append(m.Fields, fieldView{
+					Decl: assoc + " *" + tgtPkg + "." + tgt.LocalName +
+						" `gorm:\"foreignKey:" + goField + constraintTag(t, col.Name) +
+						"\" json:\"" + strings.ToLower(assoc) + ",omitempty\"`",
+				})
+				assocImports[db.GoModule+"/"+db.Name+"/"+tgtPkg] = true
 			}
 		}
 		// HasMany back-references (e.g. Author.Books []Book). Same-schema only:
@@ -103,13 +118,21 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 		models = append(models, m)
 	}
 
-	var imports []string
+	var std []string
 	if needJSON {
-		imports = append(imports, "encoding/json")
+		std = append(std, "encoding/json")
 	}
 	if needTime {
-		imports = append(imports, "time")
+		std = append(std, "time")
 	}
+	var third []string
+	if needPQ {
+		third = append(third, "github.com/lib/pq")
+	}
+	for imp := range assocImports {
+		third = append(third, imp)
+	}
+	sort.Strings(third)
 
 	return map[string]any{
 		"Header": header.Render("//", header.Info{
@@ -120,7 +143,7 @@ func packageView(db *schema.Database, s *schema.Schema, pkg string) map[string]a
 			Schema:        s.Name,
 		}),
 		"Package": pkg,
-		"Imports": imports,
+		"Imports": importBlock(std, third),
 		"Enums":   enumViews(s),
 		"Models":  models,
 	}
@@ -147,6 +170,49 @@ func enumViews(s *schema.Schema) []enumView {
 		out = append(out, ev)
 	}
 	return out
+}
+
+// tableByModelFunc indexes every table in the database by its globally-unique
+// ModelName, so an FK target's table (and thus its schema, local name, and
+// value-object flag) can be looked up while rendering another schema's package.
+func tableByModelFunc(db *schema.Database) func(string) *schema.Table {
+	idx := map[string]*schema.Table{}
+	for _, s := range db.Schemas {
+		for _, t := range s.Tables {
+			idx[t.ModelName] = t
+		}
+	}
+	return func(m string) *schema.Table { return idx[m] }
+}
+
+// crossSchemaVOEdges returns the directed schema pairs (from→to) that carry at
+// least one cross-schema FK to a value-object table. emitCrossAssoc uses it to
+// break a would-be import cycle when two schemas reference each other's value
+// objects.
+func crossSchemaVOEdges(db *schema.Database) map[[2]string]bool {
+	byModel := tableByModelFunc(db)
+	edges := map[[2]string]bool{}
+	for _, s := range db.Schemas {
+		for _, t := range s.Tables {
+			for _, col := range t.Columns {
+				if col.FKModel == "" {
+					continue
+				}
+				if tgt := byModel(col.FKModel); tgt != nil && tgt.ValueObject && tgt.PgSchema != t.PgSchema {
+					edges[[2]string{t.PgSchema, tgt.PgSchema}] = true
+				}
+			}
+		}
+	}
+	return edges
+}
+
+// emitCrossAssoc reports whether the from→to cross-schema value-object
+// association should be emitted. When the reverse edge also exists (mutual
+// value-object references), only the lexically smaller schema emits its side, so
+// the two generated packages never import each other.
+func emitCrossAssoc(from, to string, edges map[[2]string]bool) bool {
+	return !edges[[2]string{to, from}] || from <= to
 }
 
 // modelSchemaSet returns a predicate reporting whether a model (by its

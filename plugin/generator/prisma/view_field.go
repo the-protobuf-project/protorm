@@ -32,8 +32,10 @@ func scalarFieldName(col *schema.Column) string {
 	return naming.Camel(naming.FKFieldBase(col.Name, col.FKModel != ""))
 }
 
-// fieldDecl renders one column declaration: name, type, and attributes.
-func fieldDecl(col *schema.Column, provider types.Provider) string {
+// fieldDecl renders one column declaration: name, type, and attributes. dsName is
+// the Prisma datasource block name, used to prefix native-type attributes
+// (@<dsName>.Timestamptz(6)).
+func fieldDecl(col *schema.Column, provider types.Provider, dsName string) string {
 	var b strings.Builder
 	b.WriteString(scalarFieldName(col))
 	b.WriteByte(' ')
@@ -66,6 +68,14 @@ func fieldDecl(col *schema.Column, provider types.Provider) string {
 		b.WriteString(" @default(")
 		b.WriteString(col.Default)
 		b.WriteString(")")
+	}
+	// Pin the Postgres native type when Prisma's default would drift from the
+	// GORM/SQL column (DateTime → timestamp(3) without zone). The attribute is
+	// namespaced by the datasource block name. Mongo has no native-type attributes.
+	if provider == types.Postgres {
+		if nt := types.PrismaNativeType(col.SQLType); nt != "" {
+			b.WriteString(" @" + dsName + "." + nt)
+		}
 	}
 	mapName := col.Name
 	if provider == types.MongoDB && col.PrimaryKey {
