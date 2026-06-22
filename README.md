@@ -11,10 +11,6 @@
 [![CI](https://github.com/the-protobuf-project/protorm/actions/workflows/test.yaml/badge.svg)](https://github.com/the-protobuf-project/protorm/actions/workflows/test.yaml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-> [!CAUTION]
-> Early development — the API and generated output may change between versions.
-> Pin a release tag in CI and review the diff before applying a migration.
-
 ## Contents
 
 - [Overview](#overview)
