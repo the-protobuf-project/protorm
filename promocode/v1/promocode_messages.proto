@@ -1,0 +1,209 @@
+syntax = "proto3";
+
+package freebusy.promocode.v1;
+
+import "freebusy/promocode/v1/enums.proto";
+import "freebusy/promocode/v1/promocode.proto";
+import "google/api/field_behavior.proto";
+import "google/api/field_info.proto";
+import "google/api/resource.proto";
+import "google/protobuf/field_mask.proto";
+import "google/type/money.proto";
+
+option go_package = "github.com/oh-tarnished/freebusy/protobuf/generated/go/promocode/v1/promocodepbv1;promocodepbv1";
+option java_multiple_files = true;
+option java_outer_classname = "PromoCodeMessagesProto";
+option java_package = "dev.ohtarnished.freebusy.promocode.v1";
+
+// Request message for ListPromoCodes.
+message ListPromoCodesRequest {
+  // Maximum number of promo codes to return. The server may cap this.
+  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Page token from a previous ListPromoCodes call's next_page_token.
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Filter expression over promo code fields, e.g. `state = ACTIVE` or a
+  // substring match on code/display_name (AIP-160).
+  string filter = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Sort order, e.g. "code" or "create_time desc".
+  string order_by = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for ListPromoCodes.
+message ListPromoCodesResponse {
+  // The page of promo codes.
+  repeated PromoCode promo_codes = 1;
+
+  // Token to pass as page_token to retrieve the next page; empty when no more.
+  string next_page_token = 2;
+
+  // Total number of promo codes matching the filter across all pages, when the
+  // server computes it; 0 if unknown. Useful for rendering page counts (AIP-132).
+  int32 total_size = 3;
+}
+
+// Request message for GetPromoCode.
+message GetPromoCodeRequest {
+  // The promo code to retrieve.
+  // Format: promoCodes/{promo_code}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "freebusy.promocode.v1/PromoCode"}
+  ];
+}
+
+// Request message for CreatePromoCode.
+message CreatePromoCodeRequest {
+  // The promo code to create. Server-assigned fields are ignored on input:
+  // name, state, redemption_count, redemptions, create_time, update_time, etag.
+  // promo_code.code is honored only when code_generation is MANUAL (or unset).
+  PromoCode promo_code = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Whether the human-facing code is supplied by the caller (MANUAL) or minted
+  // by the server (AUTO). Unset defaults to MANUAL. When AUTO, promo_code.code
+  // is ignored and the server returns the generated code on the created resource.
+  CodeGeneration code_generation = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional caller-chosen ID for the promo code; the server generates one if unset.
+  string promo_code_id = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Caller-supplied idempotency key; identical retries return the first result.
+  string request_id = 3 [
+    (google.api.field_info).format = UUID4,
+    (google.api.field_behavior) = OPTIONAL
+  ];
+
+  // If true, validate the request and return what would happen, but don't commit.
+  bool validate_only = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for UpdatePromoCode.
+message UpdatePromoCodeRequest {
+  // The promo code to update; its name identifies the target. For optimistic
+  // concurrency, echo the etag you last read (AIP-154); the update fails if it
+  // no longer matches.
+  PromoCode promo_code = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Fields to overwrite. Omit to replace all mutable fields. Nested fields use
+  // dotted paths, e.g. "discount.amount_off", "window.end_time", "scope.min_subtotal".
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // If true, validate the request and return what would happen, but don't commit.
+  bool validate_only = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for DeletePromoCode.
+message DeletePromoCodeRequest {
+  // The promo code to delete.
+  // Format: promoCodes/{promo_code}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "freebusy.promocode.v1/PromoCode"}
+  ];
+
+  // Optional optimistic-concurrency guard: if set, the delete fails unless it
+  // matches the current PromoCode.etag (AIP-154). Echo the etag you last read.
+  string etag = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for ValidatePromoCode. Computes the discount a code would
+// apply to a prospective booking without redeeming it.
+message ValidatePromoCodeRequest {
+  // The human-entered code to validate (e.g. "SUMMER25").
+  string code = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Subtotal the discount would apply to.
+  google.type.Money subtotal = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Resource being booked, for scope checks.
+  // Format: resources/{resource}
+  string resource = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (google.api.resource_reference) = {type: "freebusy.resource.v1/Resource"}
+  ];
+
+  // Offering being booked, for scope checks.
+  // Format: resources/{resource}/offerings/{offering}
+  string offering = 4 [
+    (google.api.field_behavior) = OPTIONAL,
+    (google.api.resource_reference) = {type: "freebusy.resource.v1/Offering"}
+  ];
+
+  // Customer redeeming the code, for per-customer limit checks.
+  // Format: users/{user}
+  string customer = 5 [
+    (google.api.field_behavior) = OPTIONAL,
+    (google.api.resource_reference) = {type: "freebusy.identity.v1/User"}
+  ];
+}
+
+// Response message for ValidatePromoCode.
+message ValidatePromoCodeResponse {
+  // Whether the code is valid and applicable to the given context.
+  bool valid = 1;
+
+  // Structured reason the code is not valid, when valid is false; branch on this
+  // rather than parsing `reason`. UNSPECIFIED when valid is true.
+  PromoCodeInvalidReason invalid_reason = 6;
+
+  // Human-readable detail for invalid_reason, suitable for display
+  // (e.g. "Minimum subtotal of $50 not met"). Empty when valid is true.
+  string reason = 2;
+
+  // The resolved promo code, when valid.
+  // Format: promoCodes/{promo_code}
+  string promo_code = 3 [(google.api.resource_reference) = {type: "freebusy.promocode.v1/PromoCode"}];
+
+  // Discount the code applies to the subtotal.
+  google.type.Money discount_amount = 4;
+
+  // Subtotal minus the discount.
+  google.type.Money final_total = 5;
+}
+
+// Request message for GetRedemption.
+message GetRedemptionRequest {
+  // The redemption to retrieve.
+  // Format: promoCodes/{promo_code}/redemptions/{redemption}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "freebusy.promocode.v1/Redemption"}
+  ];
+}
+
+// Request message for ListRedemptions.
+message ListRedemptionsRequest {
+  // The promo code whose redemptions to list.
+  // Format: promoCodes/{promo_code}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {child_type: "freebusy.promocode.v1/Redemption"}
+  ];
+
+  // Maximum number of redemptions to return. The server may cap this.
+  int32 page_size = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Page token from a previous ListRedemptions call's next_page_token.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Filter expression over redemption fields, e.g. `customer = "users/123"` (AIP-160).
+  string filter = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Sort order, e.g. "redeemed_time desc".
+  string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for ListRedemptions.
+message ListRedemptionsResponse {
+  // The page of redemptions, newest first by default.
+  repeated Redemption redemptions = 1;
+
+  // Token to pass as page_token to retrieve the next page; empty when no more.
+  string next_page_token = 2;
+
+  // Total number of redemptions for the promo code, when the server computes it;
+  // 0 if unknown.
+  int32 total_size = 3;
+}

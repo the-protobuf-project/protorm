@@ -16,6 +16,12 @@ package generator
 // Singular field → belongs-to (FK on the parent). Repeated field → has-many
 // (FK on the child pointing back at the parent). Cycles terminate because a
 // message is materialized at most once per database.
+//
+// A materialized child lands in the parent's schema by default, but a
+// protorm.yaml rule matching the child message's own package can route it to a
+// fixed schema instead (see materialize / valueObjectSchema): this is how a
+// shared value object such as google.type.Money is collected into one "common"
+// schema deterministically rather than wherever it happens to be seen first.
 
 import (
 	"google.golang.org/genproto/googleapis/api/annotations"
@@ -137,8 +143,16 @@ func (ctx *buildCtx) normalizeEmbeds(diags *diagnostics) {
 	}
 }
 
-// materialize returns the table for msg in db, building it (under schemaName)
-// on first sight. The build records any further embeds the child introduces.
+// materialize returns the table for msg in db, building it on first sight. The
+// build records any further embeds the child introduces.
+//
+// The child's schema defaults to schemaName (the parent's schema) but is
+// overridden by a protorm.yaml rule matching the child message's own package: a
+// value object shared across services (google.type.Money, a vendored common
+// type) can thus be routed to a single, deterministic schema (e.g. "common")
+// regardless of which parent materializes it first. The child always stays in
+// the parent's database (db) — an FK target can't cross databases — so a rule's
+// database is irrelevant here; only its schema applies.
 func (ctx *buildCtx) materialize(db *schema.Database, schemaName string, msg *protogen.Message) *schema.Table {
 	full := string(msg.Desc.FullName())
 	for _, s := range db.Schemas {
@@ -149,6 +163,7 @@ func (ctx *buildCtx) materialize(db *schema.Database, schemaName string, msg *pr
 		}
 	}
 
+	schemaName = ctx.valueObjectSchema(schemaName, msg)
 	s := schemaByName(db, schemaName)
 	srcPath := msg.Desc.ParentFile().Path()
 	tOpts := tableOpts(msg)
@@ -176,4 +191,23 @@ func (ctx *buildCtx) materialize(db *schema.Database, schemaName string, msg *pr
 	applyTimestamps(t, tOpts.GetTimestamps())
 	ensurePK(t)
 	return t
+}
+
+// valueObjectSchema returns the schema a materialized value object should live
+// in: the schema assigned by a protorm.yaml rule matching the message's own
+// package, or fallback (the parent's schema) when no rule applies. A
+// config-derived schema obeys the same strip_version treatment as
+// resource-derived schemas in mergeFile.
+func (ctx *buildCtx) valueObjectSchema(fallback string, msg *protogen.Message) string {
+	if ctx.layout == nil {
+		return fallback
+	}
+	_, s, stripVer := ctx.layout.resolve(string(msg.Desc.ParentFile().Package()))
+	if s == "" {
+		return fallback
+	}
+	if stripVer {
+		s = naming.StripPackageVersion(s)
+	}
+	return s
 }

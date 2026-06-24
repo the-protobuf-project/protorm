@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+// Money mirrors google.type.Money: an external value type imported by the case
+// protos but never listed in file_to_generate. It stands in for any third-party
+// message (google.type.Money, a vendored common.proto, …) so the golden case can
+// exercise imported-message relationalization without genproto's descriptors
+// being linked into the test binary.
+package ext.type.v1;
+
+option go_package = "example.com/ext/type/v1;exttypev1";
+
+// Money is an amount of money with its currency type.
+message Money {
+  // The three-letter ISO 4217 currency code.
+  string currency_code = 1;
+  // Whole units of the amount.
+  int64 units = 2;
+  // Number of nano (10^-9) units of the amount.
+  int32 nanos = 3;
+}

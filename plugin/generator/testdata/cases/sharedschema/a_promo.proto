@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+// Package freebusy.promocode.v1 lives in the shared freebusy_db under its own
+// "promocode" schema (set by the datasource annotation). Its Money fields are
+// the imported ext.type.v1.Money, which the case's protorm.yaml routes to a
+// shared "common" schema — so the materialized money table is deterministically
+// common.moneys, shared with billing.v1, regardless of which file is processed
+// first. This file sorts first, so without config-driven routing Money would
+// have landed in the promocode schema.
+package freebusy.promocode.v1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+import "money.proto";
+import "protorm/v1/annotations.proto";
+
+option (protorm.v1.datasource) = {
+  database: "freebusy_db"
+  schema: "promocode"
+};
+
+// PromoCode is a redeemable discount with a has-many set of redemptions.
+message PromoCode {
+  option (google.api.resource) = {
+    type: "freebusy.promocode.v1/PromoCode"
+    pattern: "promoCodes/{promo_code}"
+    singular: "promoCode"
+    plural: "promoCodes"
+  };
+
+  // Resource name; the AIP identifier.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // Fixed amount off → belongs-to the shared common.moneys table.
+  ext.type.v1.Money amount_off = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Redemptions of this code → has-many child table promocode.redemptions, with
+  // a synthesized promo_code_id FK pointing back here.
+  repeated Redemption redemptions = 3;
+}
+
+// Redemption is one use of a promo code. As a repeated nested message it
+// materializes into promocode.redemptions; its own Money field routes to the
+// shared common.moneys, one schema level down from the parent.
+message Redemption {
+  // Customer who redeemed the code (resource name).
+  string customer = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // When the code was redeemed.
+  google.protobuf.Timestamp redeemed_time = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Discount actually applied → belongs-to the shared common.moneys table.
+  ext.type.v1.Money amount_applied = 3 [(google.api.field_behavior) = REQUIRED];
+}

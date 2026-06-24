@@ -1,0 +1,9 @@
+# Route the imported value type ext.type.v1.Money (stand-in for google.type.Money)
+# to a shared "common" schema in freebusy_db. Every service that embeds it then
+# shares one common.moneys table instead of materializing a copy in its own
+# schema. The database is irrelevant for a materialized value object (it always
+# lives in its owner's database); only the schema applies.
+datasources:
+  - match: "ext.type.v1"
+    database: freebusy_db
+    schema: common

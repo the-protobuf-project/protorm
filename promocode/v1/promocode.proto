@@ -1,0 +1,210 @@
+syntax = "proto3";
+
+package freebusy.promocode.v1;
+
+import "freebusy/promocode/v1/enums.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "google/type/money.proto";
+import "protorm/v1/annotations.proto";
+
+option go_package = "github.com/oh-tarnished/freebusy/protobuf/generated/go/promocode/v1/promocodepbv1;promocodepbv1";
+option java_multiple_files = true;
+option java_outer_classname = "PromoCodeProto";
+option java_package = "dev.ohtarnished.freebusy.promocode.v1";
+
+// Promo codes share the freebusy database under their own "promocode" schema, so
+// the imported google.type.Money can be shared cross-schema in "common" (routed
+// via protorm.yaml — google.type can't be annotated). See protorm.yaml.
+option (protorm.v1.datasource) = {
+  database: "freebusydb"
+  schema: "promocode"
+  provider: "postgres"
+  url: "postgresql://user:pass@localhost:5432/freebusydb"
+};
+
+// A redeemable discount applied to a booking's subtotal. Scoped by a redemption
+// window, usage caps, a minimum subtotal, and an optional set of resources /
+// offerings it applies to.
+message PromoCode {
+  option (google.api.resource) = {
+    type: "freebusy.promocode.v1/PromoCode"
+    pattern: "promoCodes/{promo_code}"
+    singular: "promoCode"
+    plural: "promoCodes"
+  };
+  // Surrogate ULID PK; the AIP name is demoted to a UNIQUE lookup column.
+  // create_time/update_time are declared as fields below, so no timestamps:true
+  // (that would add duplicate created_at/updated_at columns).
+  option (protorm.v1.table) = {id: ID_STRATEGY_ULID};
+
+  // The promo code name.
+  // Format: promoCodes/{promo_code}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // Was `uid`; the name's final segment (a ULID) is the canonical ID.
+  reserved 2;
+
+  // The human-entered code, unique across all promo codes (e.g. "SUMMER25").
+  string code = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (protorm.v1.column) = {unique: true}
+  ];
+
+  // Internal display name (not shown to customers).
+  string display_name = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Free-form description.
+  string description = 5 [
+    (google.api.field_behavior) = OPTIONAL,
+    (protorm.v1.column) = {type: "TEXT"}
+  ];
+
+  // Flat discount/window/limits/scope fields were promoted into the nested value
+  // messages below (each a belongs-to child table). Old numbers are retired.
+  reserved 6, 7, 8, 9, 10, 11, 12, 13, 14, 15;
+
+  // How the discount is computed → belongs-to child table promocode.discounts.
+  Discount discount = 23 [(google.api.field_behavior) = REQUIRED];
+
+  // When the code is redeemable → belongs-to promocode.redemption_windows.
+  RedemptionWindow window = 24 [(google.api.field_behavior) = OPTIONAL];
+
+  // Redemption caps → belongs-to promocode.usage_limits.
+  UsageLimits limits = 25 [(google.api.field_behavior) = OPTIONAL];
+
+  // What the code applies to (eligibility) → belongs-to promocode.scopes.
+  Scope scope = 26 [(google.api.field_behavior) = OPTIONAL];
+
+  // How many times the code has been redeemed. Cheap summary on the resource;
+  // the individual redemptions are a paginated sub-collection
+  // (promoCodes/{promo_code}/redemptions) listed via ListRedemptions, not inlined
+  // here, so reads stay bounded as redemptions accumulate.
+  int64 redemption_count = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Was `repeated Redemption redemptions`; promoted to the Redemption sub-resource
+  // so Get/List responses don't carry an unbounded redemption list.
+  reserved 22;
+
+  // Derived lifecycle state, recomputed on every read/validate (no background
+  // job): DISABLED when `disabled` is set; EXPIRED once now > window.end_time
+  // (the expiry) or the code is out of redemptions; otherwise ACTIVE. This is how
+  // a code auto-disables at its expiry without a stored flag to flip.
+  PromoCodeState state = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // If true, the code is manually disabled regardless of its window and caps.
+  bool disabled = 20 [(google.api.field_behavior) = OPTIONAL];
+
+  // Creation timestamp.
+  google.protobuf.Timestamp create_time = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Last-modification timestamp.
+  google.protobuf.Timestamp update_time = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Opaque version for optimistic concurrency (AIP-154); echo on update/delete.
+  string etag = 21;
+}
+
+// Discount describes how a promo code reduces a subtotal. Nested value object →
+// belongs-to child table promocode.discounts (FK discount_id on promo_codes).
+// Exactly one of percent_off / amount_off is set; the oneof case is the
+// discriminator, so no separate type enum is needed.
+message Discount {
+  // Exactly one arm is set; which one determines whether the discount is a
+  // percentage or a fixed amount.
+  oneof amount {
+    // Percentage off the subtotal (1-100).
+    int32 percent_off = 1;
+
+    // Fixed amount off the subtotal.
+    // Normalized into the shared common.moneys table (belongs-to via amount_off_id).
+    google.type.Money amount_off = 2;
+  }
+}
+
+// RedemptionWindow bounds when a code can be redeemed; an unset bound is
+// open-ended. Nested value object → belongs-to promocode.redemption_windows.
+message RedemptionWindow {
+  // Earliest the code can be redeemed. Unset means no lower bound.
+  google.protobuf.Timestamp start_time = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // The code's expiry: the latest moment it can be redeemed. Once now passes
+  // this, the derived PromoCode.state becomes EXPIRED. Unset means never expires.
+  google.protobuf.Timestamp end_time = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// UsageLimits caps how often a code can be redeemed. Nested value object →
+// belongs-to promocode.usage_limits. The caps are wrapper types so "unset"
+// (unlimited) is distinct from an explicit value, including 0.
+message UsageLimits {
+  // Maximum total redemptions across all customers. Unset means unlimited.
+  google.protobuf.Int64Value max_redemptions = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Maximum redemptions per customer. Unset means unlimited.
+  google.protobuf.Int32Value per_customer_limit = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Scope restricts which bookings a code applies to. Nested value object →
+// belongs-to promocode.scopes. Its repeated resource references and Money
+// normalize one level deeper (array columns / common.moneys).
+message Scope {
+  // Minimum subtotal required for the code to apply.
+  // Normalized into the shared common.moneys table (belongs-to via min_subtotal_id).
+  google.type.Money min_subtotal = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Resources the code applies to. Empty means all resources.
+  // Format: resources/{resource}
+  repeated string applicable_resources = 2 [
+    (google.api.field_behavior) = OPTIONAL,
+    (google.api.resource_reference) = {type: "freebusy.resource.v1/Resource"}
+  ];
+
+  // Offerings the code applies to. Empty means all offerings.
+  // Format: resources/{resource}/offerings/{offering}
+  repeated string applicable_offerings = 3 [
+    (google.api.field_behavior) = OPTIONAL,
+    (google.api.resource_reference) = {type: "freebusy.resource.v1/Offering"}
+  ];
+}
+
+// Redemption is a single use of a promo code, modeled as a sub-resource of
+// PromoCode rather than an inline list — so it has its own name/lifecycle and is
+// listed with paging (ListRedemptions). The {promo_code} parent segment
+// generates the promo_code_id FK back to the owning code (1:n into
+// promocode.redemptions); amount_applied is the shared google.type.Money in
+// common.moneys. Redemptions are created during CreateBooking, never directly.
+message Redemption {
+  option (google.api.resource) = {
+    type: "freebusy.promocode.v1/Redemption"
+    pattern: "promoCodes/{promo_code}/redemptions/{redemption}"
+    singular: "redemption"
+    plural: "redemptions"
+  };
+  option (protorm.v1.table) = {id: ID_STRATEGY_ULID};
+
+  // The redemption resource name.
+  // Format: promoCodes/{promo_code}/redemptions/{redemption}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // The customer who redeemed the code.
+  // Format: users/{user}
+  string customer = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "freebusy.identity.v1/User"}
+  ];
+
+  // The booking the code was applied to.
+  // Format: bookings/{booking}
+  string booking = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {type: "freebusy.booking.v1/Booking"}
+  ];
+
+  // When the code was redeemed.
+  google.protobuf.Timestamp redeemed_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The discount actually applied at redemption.
+  google.type.Money amount_applied = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

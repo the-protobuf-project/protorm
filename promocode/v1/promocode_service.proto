@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package freebusy.promocode.v1;
+
+import "freebusy/promocode/v1/promocode.proto";
+import "freebusy/promocode/v1/promocode_messages.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/protobuf/empty.proto";
+import "mcp/protobuf/annotations.proto";
+
+option go_package = "github.com/oh-tarnished/freebusy/protobuf/generated/go/promocode/v1/promocodepbv1;promocodepbv1";
+option java_multiple_files = true;
+option java_outer_classname = "PromoCodeServiceProto";
+option java_package = "dev.ohtarnished.freebusy.promocode.v1";
+
+// PromoCodeService manages redeemable discount codes and validates them against
+// a prospective booking. Redemption itself happens inside CreateBooking.
+service PromoCodeService {
+  option (google.api.default_host) = "freebusy.ohtarnished.dev";
+  option (mcp.protobuf.service) = {
+    app: {
+      name: "Promo Codes"
+      version: "1.0.0"
+      description: "Manage discount codes and validate them against a booking."
+    }
+  };
+
+  // Lists promo codes.
+  rpc ListPromoCodes(ListPromoCodesRequest) returns (ListPromoCodesResponse) {
+    option (google.api.http) = {get: "/promocode/v1/promoCodes"};
+    option (mcp.protobuf.tool) = {description: "List promo codes. Filter by status, search by code, and paginate."};
+  }
+
+  // Gets a single promo code.
+  rpc GetPromoCode(GetPromoCodeRequest) returns (PromoCode) {
+    option (google.api.http) = {get: "/promocode/v1/{name=promoCodes/*}"};
+    option (google.api.method_signature) = "name";
+    option (mcp.protobuf.tool) = {description: "Get a single promo code by resource name, including its caps and redemption count."};
+  }
+
+  // Creates a promo code.
+  rpc CreatePromoCode(CreatePromoCodeRequest) returns (PromoCode) {
+    option (google.api.http) = {
+      post: "/promocode/v1/promoCodes"
+      body: "promo_code"
+    };
+    option (google.api.method_signature) = "promo_code,promo_code_id";
+    option (mcp.protobuf.tool) = {description: "Create a promo code with a percentage or fixed discount, a redemption window, usage caps, and scope."};
+  }
+
+  // Updates a promo code.
+  rpc UpdatePromoCode(UpdatePromoCodeRequest) returns (PromoCode) {
+    option (google.api.http) = {
+      patch: "/promocode/v1/{promo_code.name=promoCodes/*}"
+      body: "promo_code"
+    };
+    option (google.api.method_signature) = "promo_code,update_mask";
+    option (mcp.protobuf.tool) = {description: "Update a promo code's discount, window, caps, scope, or status."};
+  }
+
+  // Deletes a promo code.
+  rpc DeletePromoCode(DeletePromoCodeRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/promocode/v1/{name=promoCodes/*}"};
+    option (google.api.method_signature) = "name";
+    option (mcp.protobuf.tool) = {description: "Delete a promo code by resource name."};
+  }
+
+  // Validates a code against a prospective booking and returns the discount.
+  rpc ValidatePromoCode(ValidatePromoCodeRequest) returns (ValidatePromoCodeResponse) {
+    option (google.api.http) = {
+      post: "/promocode/v1/promoCodes:validate"
+      body: "*"
+    };
+    option (google.api.method_signature) = "code,subtotal";
+    option (mcp.protobuf.tool) = {description: "Check whether a code applies to a booking (resource/offering/subtotal/customer) and compute the discount and final total."};
+  }
+
+  // Lists redemptions of a promo code (paged). Redemptions are created during
+  // CreateBooking, so this service exposes read-only access to them.
+  rpc ListRedemptions(ListRedemptionsRequest) returns (ListRedemptionsResponse) {
+    option (google.api.http) = {get: "/promocode/v1/{parent=promoCodes/*}/redemptions"};
+    option (google.api.method_signature) = "parent";
+    option (mcp.protobuf.tool) = {description: "List the redemptions of a promo code, paginated and filterable by customer or time."};
+  }
+
+  // Gets a single redemption by resource name.
+  rpc GetRedemption(GetRedemptionRequest) returns (Redemption) {
+    option (google.api.http) = {get: "/promocode/v1/{name=promoCodes/*/redemptions/*}"};
+    option (google.api.method_signature) = "name";
+    option (mcp.protobuf.tool) = {description: "Get a single promo code redemption by resource name."};
+  }
+}

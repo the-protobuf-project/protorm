@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+// Package freebusy.billing.v1 shares freebusy_db (under schema "billing") and
+// also references the imported Money. Because both billing and promocode route
+// ext.type.v1.Money to the same "common" schema, the value object is shared into
+// a single common.moneys table (deduped by proto full-name), referenced
+// cross-schema from both services.
+package freebusy.billing.v1;
+
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "money.proto";
+import "protorm/v1/annotations.proto";
+
+option (protorm.v1.datasource) = {
+  database: "freebusy_db"
+  schema: "billing"
+};
+
+// Invoice carries a total expressed as the shared Money value object.
+message Invoice {
+  option (google.api.resource) = {
+    type: "freebusy.billing.v1/Invoice"
+    pattern: "invoices/{invoice}"
+    singular: "invoice"
+    plural: "invoices"
+  };
+
+  // Resource name; the AIP identifier.
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // Invoice total → belongs-to the shared common.moneys table.
+  ext.type.v1.Money total = 2 [(google.api.field_behavior) = REQUIRED];
+}

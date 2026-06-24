@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package freebusy.promocode.v1;
+
+option go_package = "github.com/oh-tarnished/freebusy/protobuf/generated/go/promocode/v1/promocodepbv1;promocodepbv1";
+option java_multiple_files = true;
+option java_outer_classname = "EnumsProto";
+option java_package = "dev.ohtarnished.freebusy.promocode.v1";
+
+// Lifecycle state of a promo code.
+enum PromoCodeState {
+  // Unset; treated as active.
+  PROMO_CODE_STATE_UNSPECIFIED = 0;
+
+  // Redeemable (subject to window and caps).
+  PROMO_CODE_STATE_ACTIVE = 1;
+
+  // Manually disabled.
+  PROMO_CODE_STATE_DISABLED = 2;
+
+  // Past its redemption window or out of redemptions.
+  PROMO_CODE_STATE_EXPIRED = 3;
+}
+
+// Why a promo code failed validation, returned on ValidatePromoCodeResponse.
+// Each value maps to one of the code's nested rules (window / limits / scope) or
+// its lifecycle, so a client can branch without parsing the human-readable reason.
+enum PromoCodeInvalidReason {
+  // The code is valid, or no specific reason applies.
+  PROMO_CODE_INVALID_REASON_UNSPECIFIED = 0;
+
+  // No promo code matches the supplied code string.
+  PROMO_CODE_INVALID_REASON_NOT_FOUND = 1;
+
+  // The code is manually disabled (`disabled` is set).
+  PROMO_CODE_INVALID_REASON_DISABLED = 2;
+
+  // Now is before window.start_time; the code isn't redeemable yet.
+  PROMO_CODE_INVALID_REASON_NOT_STARTED = 3;
+
+  // Now is after window.end_time; the code has expired.
+  PROMO_CODE_INVALID_REASON_EXPIRED = 4;
+
+  // The code hit its total redemption cap (limits.max_redemptions).
+  PROMO_CODE_INVALID_REASON_OUT_OF_REDEMPTIONS = 5;
+
+  // The customer hit their per-customer cap (limits.per_customer_limit).
+  PROMO_CODE_INVALID_REASON_PER_CUSTOMER_LIMIT_REACHED = 6;
+
+  // The subtotal is below scope.min_subtotal.
+  PROMO_CODE_INVALID_REASON_BELOW_MIN_SUBTOTAL = 7;
+
+  // The booked resource/offering is outside scope.applicable_resources/offerings.
+  PROMO_CODE_INVALID_REASON_OUT_OF_SCOPE = 8;
+}
+
+// How the human-facing code string is chosen when creating a promo code.
+enum CodeGeneration {
+  // Unset; treated as MANUAL (use the caller-provided code).
+  CODE_GENERATION_UNSPECIFIED = 0;
+
+  // The caller provides the code in promo_code.code; the server uses it verbatim.
+  CODE_GENERATION_MANUAL = 1;
+
+  // The server generates a unique code; any code in promo_code.code is ignored.
+  CODE_GENERATION_AUTO = 2;
+}
