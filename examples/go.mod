@@ -7,7 +7,7 @@ go 1.26.4
 replace github.com/the-protobuf-project/protorm => ../
 
 require (
-	gorm.io/gorm v1.31.1
+	gorm.io/gorm v1.31.2
 	gorm.io/plugin/opentelemetry v0.1.16
 )
 
